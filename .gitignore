@@ -1,0 +1,43 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# cocotb / simulation
+sim_build/
+results.xml
+dump.vcd
+*.vcd
+*.fst
+*.wdb
+
+# Vivado logs and generated files
+.Xil/
+build/
+*.jou
+*.log
+*.str
+*.xpr
+*.xsa
+*.bit
+*.hwh
+*.ltx
+*.runs/
+*.cache/
+*.hw/
+*.ip_user_files/
+*.sim/
+*.srcs/
+*.gen/
+*.data/
+fpga/**/build/*
+!fpga/**/build/.gitkeep
+
+# Local reference material that is not part of the public project
+upstream/
+
+# Editor
+.agents/
+.codex/
+.vscode/
