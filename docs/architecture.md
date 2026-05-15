@@ -1,6 +1,6 @@
 # Architecture
 
-v0.3-open-rv32im is a source-first PYNQ-Z2 SoC.
+v0.4-fuller-rv32i-c-support is a source-first PYNQ-Z2 SoC.
 
 ```text
 tinycpu_core_rv32im_axil
@@ -10,7 +10,8 @@ tinycpu_core_rv32im_axil
 ```
 
 The CPU target ISA is standard RISC-V RV32IM. The current milestone implements
-the RV32I bring-up subset needed to run a switch-to-LED MMIO demo.
+fuller RV32I support for simple freestanding C and keeps RV32M planned for the
+next CPU milestone.
 
 The board wrapper, `pynqz2_top`, only connects PYNQ-Z2 pins to the SoC:
 

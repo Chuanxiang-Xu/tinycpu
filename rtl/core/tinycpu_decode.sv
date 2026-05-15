@@ -1,4 +1,4 @@
-// RISC-V RV32 decode helper for the tinycpu bring-up subset.
+// RISC-V RV32I decode helper for the tinycpu teaching core.
 //
 // This module only decodes standard RISC-V instruction fields and immediates.
 // Unsupported instructions are marked illegal so the core can trap/halt instead
@@ -79,23 +79,48 @@ module tinycpu_decode (
             end
 
             OPCODE_BRANCH: begin
-                illegal = !((funct3 == 3'b000) || (funct3 == 3'b001));
+                illegal = !((funct3 == 3'b000) || (funct3 == 3'b001) ||
+                            (funct3 == 3'b100) || (funct3 == 3'b101) ||
+                            (funct3 == 3'b110) || (funct3 == 3'b111));
             end
 
             OPCODE_LOAD: begin
-                illegal = (funct3 != 3'b010);
+                illegal = !((funct3 == 3'b000) || (funct3 == 3'b001) ||
+                            (funct3 == 3'b010) || (funct3 == 3'b100) ||
+                            (funct3 == 3'b101));
             end
 
             OPCODE_STORE: begin
-                illegal = (funct3 != 3'b010);
+                illegal = !((funct3 == 3'b000) || (funct3 == 3'b001) ||
+                            (funct3 == 3'b010));
             end
 
             OPCODE_OP_IMM: begin
-                illegal = (funct3 != 3'b000);
+                case (funct3)
+                    3'b000, // ADDI
+                    3'b010, // SLTI
+                    3'b011, // SLTIU
+                    3'b100, // XORI
+                    3'b110, // ORI
+                    3'b111: illegal = 1'b0; // ANDI
+                    3'b001: illegal = (funct7 != 7'b0000000); // SLLI
+                    3'b101: illegal = !((funct7 == 7'b0000000) || (funct7 == 7'b0100000)); // SRLI/SRAI
+                    default: illegal = 1'b1;
+                endcase
             end
 
             OPCODE_OP: begin
-                illegal = !((funct3 == 3'b000) && ((funct7 == 7'b0000000) || (funct7 == 7'b0100000)));
+                case (funct3)
+                    3'b000: illegal = !((funct7 == 7'b0000000) || (funct7 == 7'b0100000)); // ADD/SUB
+                    3'b001, // SLL
+                    3'b010, // SLT
+                    3'b011, // SLTU
+                    3'b100, // XOR
+                    3'b110, // OR
+                    3'b111: illegal = (funct7 != 7'b0000000); // AND
+                    3'b101: illegal = !((funct7 == 7'b0000000) || (funct7 == 7'b0100000)); // SRL/SRA
+                    default: illegal = 1'b1;
+                endcase
             end
 
             default: begin

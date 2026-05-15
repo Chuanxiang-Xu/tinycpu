@@ -1,4 +1,4 @@
-// Basic hazard helper for the v0.3 pipeline structure.
+// Basic hazard helper for the teaching pipeline structure.
 //
 // The current core globally stalls around AXI-Lite transactions. This module
 // captures the standard load-use hazard rule and branch flush signal so the

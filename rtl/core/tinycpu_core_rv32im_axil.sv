@@ -1,7 +1,8 @@
 // Clean-room RV32IM-target tiny CPU with one AXI-Lite master port.
 //
-// v0.3-open-rv32im implements a standard RISC-V bring-up subset:
-//   LUI, AUIPC, ADDI, ADD, SUB, LW, SW, BEQ, BNE, JAL, JALR
+// v0.4-fuller-rv32i-c-support implements the RV32I integer base needed for
+// simple freestanding C. The project target remains RV32IM; the M extension is
+// intentionally left in tinycpu_muldiv.sv for a later integration step.
 //
 // The file is organized around the classic five stages (IF, ID, EX, MEM, WB).
 // Because this teaching SoC has one simple AXI-Lite master for both instruction
@@ -56,14 +57,44 @@ module tinycpu_core_rv32im_axil #(
     localparam logic [6:0] OPCODE_OP_IMM = 7'b0010011;
     localparam logic [6:0] OPCODE_OP     = 7'b0110011;
 
-    localparam logic [2:0] FUNCT3_ADDI = 3'b000;
-    localparam logic [2:0] FUNCT3_LW   = 3'b010;
-    localparam logic [2:0] FUNCT3_SW   = 3'b010;
+    localparam logic [2:0] FUNCT3_ADDI_SL = 3'b000;
+    localparam logic [2:0] FUNCT3_SLL     = 3'b001;
+    localparam logic [2:0] FUNCT3_SLT     = 3'b010;
+    localparam logic [2:0] FUNCT3_SLTU    = 3'b011;
+    localparam logic [2:0] FUNCT3_XOR     = 3'b100;
+    localparam logic [2:0] FUNCT3_SHIFT_R = 3'b101;
+    localparam logic [2:0] FUNCT3_OR      = 3'b110;
+    localparam logic [2:0] FUNCT3_AND     = 3'b111;
+
+    localparam logic [2:0] FUNCT3_LB  = 3'b000;
+    localparam logic [2:0] FUNCT3_LH  = 3'b001;
+    localparam logic [2:0] FUNCT3_LW  = 3'b010;
+    localparam logic [2:0] FUNCT3_LBU = 3'b100;
+    localparam logic [2:0] FUNCT3_LHU = 3'b101;
+
+    localparam logic [2:0] FUNCT3_SB = 3'b000;
+    localparam logic [2:0] FUNCT3_SH = 3'b001;
+    localparam logic [2:0] FUNCT3_SW = 3'b010;
+
     localparam logic [2:0] FUNCT3_BEQ  = 3'b000;
     localparam logic [2:0] FUNCT3_BNE  = 3'b001;
+    localparam logic [2:0] FUNCT3_BLT  = 3'b100;
+    localparam logic [2:0] FUNCT3_BGE  = 3'b101;
+    localparam logic [2:0] FUNCT3_BLTU = 3'b110;
+    localparam logic [2:0] FUNCT3_BGEU = 3'b111;
 
-    localparam logic [6:0] FUNCT7_ADD = 7'b0000000;
-    localparam logic [6:0] FUNCT7_SUB = 7'b0100000;
+    localparam logic [6:0] FUNCT7_ALT  = 7'b0100000;
+
+    localparam logic [3:0] ALU_ADD  = 4'd0;
+    localparam logic [3:0] ALU_SUB  = 4'd1;
+    localparam logic [3:0] ALU_AND  = 4'd2;
+    localparam logic [3:0] ALU_OR   = 4'd3;
+    localparam logic [3:0] ALU_XOR  = 4'd4;
+    localparam logic [3:0] ALU_SLL  = 4'd5;
+    localparam logic [3:0] ALU_SRL  = 4'd6;
+    localparam logic [3:0] ALU_SRA  = 4'd7;
+    localparam logic [3:0] ALU_SLT  = 4'd8;
+    localparam logic [3:0] ALU_SLTU = 4'd9;
 
     localparam logic [1:0] WB_ALU = 2'd0;
     localparam logic [1:0] WB_MEM = 2'd1;
@@ -111,10 +142,12 @@ module tinycpu_core_rv32im_axil #(
     logic        ex_reg_write;
     logic        ex_is_load;
     logic        ex_is_store;
+    logic [2:0]  ex_funct3;
     logic [1:0]  ex_wb_sel;
     logic        branch_taken;
     logic [31:0] branch_target;
 
+    logic [31:0] load_word;
     logic [31:0] load_data;
     logic        aw_done;
     logic        w_done;
@@ -124,6 +157,11 @@ module tinycpu_core_rv32im_axil #(
     logic [3:0]  alu_op;
     logic [31:0] alu_result;
     logic        ex_eq;
+    logic        ex_lt;
+    logic        ex_ltu;
+    logic [31:0] load_shifted;
+    logic [31:0] store_shifted;
+    logic [3:0]  store_wstrb;
     logic [31:0] wb_mux_data;
 
     logic unused_h_stall_if;
@@ -183,9 +221,38 @@ module tinycpu_core_rv32im_axil #(
                    (is_store ? imm_s : imm_i);
 
     always @* begin
-        alu_op = 4'd0; // ADD by default
-        if (is_op && (funct7 == FUNCT7_SUB)) begin
-            alu_op = 4'd1;
+        alu_op = ALU_ADD;
+
+        if (is_op || is_op_imm) begin
+            case (funct3)
+                FUNCT3_ADDI_SL: begin
+                    alu_op = (is_op && (funct7 == FUNCT7_ALT)) ? ALU_SUB : ALU_ADD;
+                end
+                FUNCT3_SLL: begin
+                    alu_op = ALU_SLL;
+                end
+                FUNCT3_SLT: begin
+                    alu_op = ALU_SLT;
+                end
+                FUNCT3_SLTU: begin
+                    alu_op = ALU_SLTU;
+                end
+                FUNCT3_XOR: begin
+                    alu_op = ALU_XOR;
+                end
+                FUNCT3_SHIFT_R: begin
+                    alu_op = (funct7 == FUNCT7_ALT) ? ALU_SRA : ALU_SRL;
+                end
+                FUNCT3_OR: begin
+                    alu_op = ALU_OR;
+                end
+                FUNCT3_AND: begin
+                    alu_op = ALU_AND;
+                end
+                default: begin
+                    alu_op = ALU_ADD;
+                end
+            endcase
         end
     end
 
@@ -222,10 +289,19 @@ module tinycpu_core_rv32im_axil #(
     always @* begin
         branch_taken  = 1'b0;
         branch_target = id_pc + 32'd4;
+        ex_lt         = $signed(rs1_data) < $signed(rs2_data);
+        ex_ltu        = rs1_data < rs2_data;
 
         if (is_branch) begin
-            branch_taken = ((funct3 == FUNCT3_BEQ) && ex_eq) ||
-                           ((funct3 == FUNCT3_BNE) && !ex_eq);
+            case (funct3)
+                FUNCT3_BEQ:  branch_taken = ex_eq;
+                FUNCT3_BNE:  branch_taken = !ex_eq;
+                FUNCT3_BLT:  branch_taken = ex_lt;
+                FUNCT3_BGE:  branch_taken = !ex_lt;
+                FUNCT3_BLTU: branch_taken = ex_ltu;
+                FUNCT3_BGEU: branch_taken = !ex_ltu;
+                default:     branch_taken = 1'b0;
+            endcase
             branch_target = id_pc + imm_b;
         end else if (is_jal) begin
             branch_taken  = 1'b1;
@@ -240,6 +316,42 @@ module tinycpu_core_rv32im_axil #(
         rd_we    = (state == ST_WB) && ex_reg_write;
         rd_waddr = ex_rd;
         rd_wdata = wb_mux_data;
+    end
+
+    always @* begin
+        load_shifted = load_word >> {ex_result[1:0], 3'b000};
+        case (ex_funct3)
+            FUNCT3_LB:  load_data = {{24{load_shifted[7]}}, load_shifted[7:0]};
+            FUNCT3_LH:  load_data = {{16{load_shifted[15]}}, load_shifted[15:0]};
+            FUNCT3_LW:  load_data = load_word;
+            FUNCT3_LBU: load_data = {24'b0, load_shifted[7:0]};
+            FUNCT3_LHU: load_data = {16'b0, load_shifted[15:0]};
+            default:    load_data = 32'h0000_0000;
+        endcase
+    end
+
+    always @* begin
+        store_shifted = 32'h0000_0000;
+        store_wstrb   = 4'b0000;
+
+        case (ex_funct3)
+            FUNCT3_SB: begin
+                store_shifted = {4{ex_store_data[7:0]}} << {ex_result[1:0], 3'b000};
+                store_wstrb   = 4'b0001 << ex_result[1:0];
+            end
+            FUNCT3_SH: begin
+                store_shifted = {2{ex_store_data[15:0]}} << {ex_result[1:0], 3'b000};
+                store_wstrb   = 4'b0011 << ex_result[1:0];
+            end
+            FUNCT3_SW: begin
+                store_shifted = ex_store_data;
+                store_wstrb   = 4'b1111;
+            end
+            default: begin
+                store_shifted = 32'h0000_0000;
+                store_wstrb   = 4'b0000;
+            end
+        endcase
     end
 
     always @* begin
@@ -265,7 +377,7 @@ module tinycpu_core_rv32im_axil #(
             end
 
             ST_MEM_LOAD_ADDR: begin
-                m_axi_araddr  = ex_result;
+                m_axi_araddr  = {ex_result[31:2], 2'b00};
                 m_axi_arvalid = 1'b1;
             end
 
@@ -274,10 +386,10 @@ module tinycpu_core_rv32im_axil #(
             end
 
             ST_MEM_STORE_REQ: begin
-                m_axi_awaddr  = ex_result;
+                m_axi_awaddr  = {ex_result[31:2], 2'b00};
                 m_axi_awvalid = !aw_done;
-                m_axi_wdata   = ex_store_data;
-                m_axi_wstrb   = 4'b1111;
+                m_axi_wdata   = store_shifted;
+                m_axi_wstrb   = store_wstrb;
                 m_axi_wvalid  = !w_done;
             end
 
@@ -303,8 +415,9 @@ module tinycpu_core_rv32im_axil #(
             ex_reg_write  <= 1'b0;
             ex_is_load    <= 1'b0;
             ex_is_store   <= 1'b0;
+            ex_funct3     <= 3'b000;
             ex_wb_sel     <= WB_ALU;
-            load_data     <= 32'h0000_0000;
+            load_word     <= 32'h0000_0000;
             aw_done       <= 1'b0;
             w_done        <= 1'b0;
             suppress_pc_advance <= 1'b0;
@@ -343,6 +456,7 @@ module tinycpu_core_rv32im_axil #(
                     ex_reg_write  <= is_lui || is_auipc || is_op_imm || is_op || is_load || is_jal || is_jalr;
                     ex_is_load    <= is_load;
                     ex_is_store   <= is_store;
+                    ex_funct3     <= funct3;
                     ex_store_data <= rs2_data;
                     ex_wb_sel     <= (is_load ? WB_MEM : ((is_jal || is_jalr) ? WB_PC4 : WB_ALU));
 
@@ -374,7 +488,7 @@ module tinycpu_core_rv32im_axil #(
 
                 ST_MEM_LOAD_DATA: begin
                     if (m_axi_rvalid) begin
-                        load_data <= m_axi_rdata;
+                        load_word <= m_axi_rdata;
                         state     <= ST_WB;
                     end
                 end
@@ -415,7 +529,8 @@ module tinycpu_core_rv32im_axil #(
         end
     end
 
-    wire unused_responses = ^{m_axi_bresp, m_axi_rresp, if_instr, unused_h_stall_if,
+    wire unused_responses = ^{m_axi_bresp, m_axi_rresp, if_instr, ex_is_store,
+                              unused_h_stall_if,
                               unused_h_stall_id, unused_h_flush_if_id, unused_h_flush_id_ex};
 
 endmodule

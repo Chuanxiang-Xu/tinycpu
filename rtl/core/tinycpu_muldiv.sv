@@ -1,8 +1,8 @@
 // RV32M multiply/divide placeholder.
 //
-// v0.3-open-rv32im targets RV32IM, but this milestone implements the bring-up
-// RV32I subset first. M-extension instructions are decoded as unsupported by
-// the core until this unit is wired into the execute stage in a later release.
+// The project targets RV32IM, but v0.4 implements fuller RV32I for C support
+// first. M-extension instructions are decoded as unsupported by the core until
+// this unit is wired into the execute stage in v0.5 or later.
 module tinycpu_muldiv (
     input  logic        valid,
     input  logic [2:0]  funct3,

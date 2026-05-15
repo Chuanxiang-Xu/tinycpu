@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the tinycpu v0.3-open-rv32im LED/switch demo program.
+"""Generate the tinycpu LED/switch demo program.
 
 The program is intentionally tiny:
 

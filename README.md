@@ -7,9 +7,9 @@ The long-term ISA target is standard RISC-V `RV32IM`. The project is clean-room:
 it is not a homework solution repository, does not use private course solution
 code, and is intended to be reproducible from a public GitHub clone.
 
-## v0.3-open-rv32im
+## v0.4-fuller-rv32i-c-support
 
-v0.3-open-rv32im builds a small RISC-V SoC:
+v0.4-fuller-rv32i-c-support builds a small RISC-V SoC:
 
 ```text
 tinycpu_core_rv32im_axil
@@ -19,27 +19,16 @@ tinycpu_core_rv32im_axil
             -> PYNQ-Z2 LEDs / switches
 ```
 
-The CPU target is RV32IM. This milestone implements the bring-up subset needed
-for the LED/switch demo:
-
-- `LUI`
-- `AUIPC`
-- `ADDI`
-- `ADD`
-- `SUB`
-- `LW`
-- `SW`
-- `BEQ`
-- `BNE`
-- `JAL`
-- `JALR`
+The CPU target is RV32IM. This milestone implements fuller RV32I for simple
+freestanding C programs built with a RISC-V GNU toolchain using
+`-march=rv32i -mabi=ilp32`.
 
 The M extension structure is present through `tinycpu_muldiv.sv`, but full
-RV32M instruction support is planned for later milestones.
+RV32M instruction support is planned for v0.5.
 
-## Demo Program
+## Demo Programs
 
-The CPU fetches a standard RV32I program from AXI-Lite RAM:
+The checked-in assembly demo and the GCC-built C firmware both implement:
 
 ```c
 while (1) {
@@ -58,7 +47,7 @@ rtl/core/       RV32IM-target core, pipeline helpers, regfile, ALU, mul/div
 rtl/axil/       AXI-Lite RAM, GPIO, interconnect
 rtl/soc/        SoC integration
 rtl/board/      PYNQ-Z2 top wrapper
-programs/       Demo assembly, linker script, hex generator
+programs/       Demo assembly, linker script, hex generator, C demo firmware
 sim/cocotb/     cocotb tests
 fpga/vivado/    Vivado Tcl and PYNQ-Z2 XDC
 docs/           Architecture, memory map, pipeline, roadmap
@@ -85,6 +74,11 @@ For FPGA bitstream generation:
 - PYNQ-Z2 board
 - PYNQ-Z2 part number confirmed as `xc7z020clg400-1` or updated in
   `fpga/vivado/create_project.tcl`
+
+For the v0.4 C firmware:
+
+- `riscv64-unknown-elf-gcc` and `riscv64-unknown-elf-objcopy`, or the
+  equivalent `riscv32-unknown-elf` tools selected with `CROSS=...`
 
 ## Memory Map
 
@@ -128,6 +122,27 @@ python3 programs/led_switch_demo.py
 The checked-in `programs/led_switch_demo.hex` is intentionally tiny and
 reproducible from the Python generator.
 
+## Build Bare-Metal C Firmware
+
+```sh
+cd programs/c_demo
+make
+```
+
+This produces `firmware.elf`, `firmware.bin`, and `firmware.hex` using:
+
+```text
+-march=rv32i -mabi=ilp32 -ffreestanding -nostdlib -nostartfiles
+```
+
+Run the C firmware in cocotb:
+
+```sh
+cd ../..
+cd sim/cocotb
+make COCOTB_TEST_MODULES=test_v04_firmware_gpio RAM_HEX=../../programs/c_demo/firmware.hex RAM_INIT_WORDS=256
+```
+
 ## Build Bitstream
 
 From the repository root:
@@ -140,10 +155,21 @@ vivado -mode batch -source fpga/vivado/build_bitstream.tcl
 The script targets the common PYNQ-Z2 part `xc7z020clg400-1`. Confirm the part
 number for your board revision if Vivado reports a mismatch.
 
+To bake the GCC-built C firmware into the RAM image:
+
+```sh
+cd programs/c_demo
+make
+
+cd ../..
+TINYCPU_RAM_HEX=programs/c_demo/firmware.hex TINYCPU_RAM_INIT_WORDS=256 \
+    vivado -mode batch -source fpga/vivado/build_bitstream.tcl
+```
+
 Expected bitstream path:
 
 ```text
-build/vivado/tinycpu_pynq_v0_3_open_rv32im/tinycpu_pynq_v0_3_open_rv32im.runs/impl_1/pynqz2_top.bit
+build/vivado/tinycpu_pynq_v0_4_fuller_rv32i_c_support/tinycpu_pynq_v0_4_fuller_rv32i_c_support.runs/impl_1/pynqz2_top.bit
 ```
 
 ## Run On PYNQ-Z2
@@ -163,6 +189,7 @@ the processing system.
 - `docs/architecture.md`
 - `docs/memory_map.md`
 - `docs/instruction_set.md`
+- `docs/baremetal_c.md`
 - `docs/pipeline.md`
 - `docs/pynqz2_bringup.md`
 - `docs/jupyter_tetris_plan.md`

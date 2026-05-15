@@ -10,10 +10,11 @@ The core is organized around the classic five-stage model:
 | MEM | AXI-Lite load/store |
 | WB | Register writeback |
 
-The v0.3 hardware has one AXI-Lite master shared by instruction fetch and data
-accesses. To keep the bring-up design small, the current control path globally
-stalls around bus transactions. This makes behavior easy to inspect while
-preserving explicit stage boundaries in the RTL:
+The v0.4 hardware still has one AXI-Lite master shared by instruction fetch and
+data accesses. To keep the C-support milestone small, the current control path
+serializes instructions through the five stage states and waits around bus
+transactions. This makes behavior easy to inspect while preserving explicit
+stage boundaries in the RTL:
 
 - `tinycpu_if_stage.sv`
 - `tinycpu_id_stage.sv`
@@ -29,7 +30,9 @@ Current hazard policy:
 - Load/store and instruction fetch are serialized through the single AXI-Lite
   master.
 - `tinycpu_hazard.sv` contains the explicit load-use and branch flush policy
-  hooks for the fuller v0.4 pipeline.
+  hooks for the later overlapped pipeline.
 
-Future work is to allow more overlapping stage activity, add forwarding paths,
-and make load-use stalls visible through pipeline valid/bubble registers.
+Because only one instruction is active at a time in v0.4, data hazards are
+naturally avoided by serialization. Future work is to allow more overlapping
+stage activity, add forwarding paths, and make load-use stalls visible through
+pipeline valid/bubble registers.

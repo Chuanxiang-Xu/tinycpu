@@ -12,6 +12,13 @@ dump.vcd
 *.fst
 *.wdb
 
+# firmware build outputs
+programs/c_demo/*.elf
+programs/c_demo/*.bin
+programs/c_demo/*.hex
+programs/c_demo/*.map
+programs/c_demo/*.lst
+
 # Vivado logs and generated files
 .Xil/
 build/

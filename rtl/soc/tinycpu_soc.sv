@@ -1,8 +1,9 @@
-// tinycpu-pynq v0.3-open-rv32im SoC.
+// tinycpu-pynq v0.4-fuller-rv32i-c-support SoC.
 //
 // CPU AXI-Lite master -> AXI-Lite interconnect -> RAM/GPIO slaves.
 module tinycpu_soc #(
-    parameter RAM_HEX = "programs/led_switch_demo.hex"
+    parameter RAM_HEX = "programs/led_switch_demo.hex",
+    parameter integer RAM_INIT_WORDS = 4
 ) (
     input  logic       clk,
     input  logic       rst,
@@ -146,7 +147,7 @@ module tinycpu_soc #(
 
     axil_ram #(
         .ADDR_WIDTH(16),
-        .INIT_WORDS (4),
+        .INIT_WORDS (RAM_INIT_WORDS),
         .MEM_HEX   (RAM_HEX)
     ) ram_i (
         .clk          (clk),

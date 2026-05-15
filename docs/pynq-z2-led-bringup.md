@@ -1,7 +1,8 @@
 # PYNQ-Z2 LED Bring-Up
 
-The current public bring-up path is v0.3-open-rv32im. The LED behavior is
-driven by a standard RISC-V program, not by direct switch-to-LED wiring.
+The current public bring-up path is v0.4-fuller-rv32i-c-support. The LED
+behavior is driven by a standard RISC-V program, not by direct switch-to-LED
+wiring.
 
 Build:
 

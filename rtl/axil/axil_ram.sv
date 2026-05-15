@@ -42,6 +42,17 @@ module axil_ram #(
         for (i = 0; i < WORDS; i = i + 1) begin
             mem[i] = 32'h0000_0013;
         end
+
+        // Default board bring-up program:
+        //   x2 = 0x40000000
+        //   loop: lw x1, 4(x2); sw x1, 0(x2); j loop
+        // This keeps the PYNQ-Z2 LED/switch demo alive even if a synthesis flow
+        // drops the external memory initialization file.
+        mem[0] = 32'h4000_0137;
+        mem[1] = 32'h0041_2083;
+        mem[2] = 32'h0011_2023;
+        mem[3] = 32'hff9f_f06f;
+
         if (MEM_HEX != "") begin
             $readmemh(MEM_HEX, mem, 0, INIT_WORDS - 1);
         end

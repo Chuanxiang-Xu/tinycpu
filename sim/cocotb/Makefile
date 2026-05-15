@@ -20,9 +20,11 @@ VERILOG_SOURCES = \
 	$(ROOT_DIR)/rtl/soc/tinycpu_soc.sv
 
 TOPLEVEL = tinycpu_soc
-COCOTB_TEST_MODULES = test_v03_soc_gpio
+COCOTB_TEST_MODULES ?= test_v03_soc_gpio
 
 SIM ?= icarus
-COMPILE_ARGS += -g2012 -P tinycpu_soc.RAM_HEX=\"../../programs/led_switch_demo.hex\"
+RAM_HEX ?= ../../programs/led_switch_demo.hex
+RAM_INIT_WORDS ?= 4
+COMPILE_ARGS += -g2012 -P tinycpu_soc.RAM_HEX=\"$(RAM_HEX)\" -P tinycpu_soc.RAM_INIT_WORDS=$(RAM_INIT_WORDS)
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
