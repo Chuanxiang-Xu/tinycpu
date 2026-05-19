@@ -22,13 +22,13 @@ TINYCPU_RAM_HEX=programs/c_demo/firmware.hex TINYCPU_RAM_INIT_WORDS=256 \
 Expected bitstream path:
 
 ```text
-build/vivado/tinycpu_pynq_v0_4_fuller_rv32i_c_support/tinycpu_pynq_v0_4_fuller_rv32i_c_support.runs/impl_1/pynqz2_top.bit
+build/vivado/tinycpu_pynq_v0_5_rv32im_m_extension/tinycpu_pynq_v0_5_rv32im_m_extension.runs/impl_1/pynqz2_top.bit
 ```
 
 Runtime behavior:
 
 - Hold `BTN0` high to reset the SoC.
 - Release `BTN0`.
-- `LED[1:0]` follows `SW[1:0]` through CPU-executed RV32I MMIO loads/stores.
+- `LED[1:0]` follows `SW[1:0]` through CPU-executed RV32IM MMIO code.
 
 There is no Zynq PS, DDR, or AXI bridge in this stage.

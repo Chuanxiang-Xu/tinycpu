@@ -1,6 +1,6 @@
 # Bare-Metal C
 
-v0.4 supports simple freestanding C programs compiled to standard RV32I.
+v0.5 supports simple freestanding C programs compiled to standard RV32IM.
 
 The demo lives in `programs/c_demo/`:
 
@@ -30,10 +30,10 @@ the RV32 flags. A `riscv32-unknown-elf` toolchain can also be used:
 make -C programs/c_demo CROSS=riscv32-unknown-elf
 ```
 
-Required v0.4 code-generation flags:
+Default v0.5 code-generation flags:
 
 ```sh
--march=rv32i -mabi=ilp32
+-march=rv32im -mabi=ilp32
 ```
 
 Required freestanding/link flags:
@@ -42,14 +42,30 @@ Required freestanding/link flags:
 -ffreestanding -nostdlib -nostartfiles
 ```
 
-Do not use these in v0.4:
+The `programs/c_demo/Makefile` exposes `MARCH` and `MABI`, so RV32I fallback
+builds are still possible for comparison:
 
-- `-march=rv32im`
+```sh
+make -C programs/c_demo MARCH=rv32i
+```
+
+Do not use these in v0.5:
+
 - compressed instructions
 - libc
 - `printf`
 - `malloc`
 - OS syscalls
+
+## RV32IM Demo
+
+`programs/rv32im_demo/` exercises C operations that lower to M-extension
+instructions, including `row * 10 + col`, `% 7`, signed division, and signed
+remainder.
+
+```sh
+make -C programs/rv32im_demo
+```
 
 ## Startup
 

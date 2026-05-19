@@ -1,6 +1,6 @@
 # Simulation
 
-v0.4-fuller-rv32i-c-support uses cocotb and Icarus Verilog for lightweight RTL
+v0.5-rv32im-m-extension uses cocotb and Icarus Verilog for lightweight RTL
 simulation.
 
 Setup:
@@ -34,4 +34,21 @@ make
 
 cd ../../sim/cocotb
 make COCOTB_TEST_MODULES=test_v04_firmware_gpio RAM_HEX=../../programs/c_demo/firmware.hex RAM_INIT_WORDS=256
+```
+
+Run the RV32M unit test:
+
+```sh
+cd sim/cocotb
+make TOPLEVEL=tinycpu_muldiv COCOTB_TEST_MODULES=test_v05_muldiv_unit
+```
+
+Run the RV32IM grid-math firmware test:
+
+```sh
+cd programs/rv32im_demo
+make
+
+cd ../../sim/cocotb
+make COCOTB_TEST_MODULES=test_v05_tetris_grid_math RAM_HEX=../../programs/rv32im_demo/firmware.hex RAM_INIT_WORDS=256
 ```

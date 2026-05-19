@@ -15,6 +15,7 @@ Reserved GPIO/MMIO addresses:
 | `0x4000_0014` | Future game status register |
 | `0x4000_0100 - 0x4000_01FF` | Future 10x20 grid/framebuffer window |
 
-The current v0.4 design verifies the CPU/RAM/GPIO path with both a tiny
-assembly demo and a GCC-built freestanding C demo. The game-facing registers
-are included to keep the memory map stable.
+The current v0.5 design verifies the CPU/RAM/GPIO path with a tiny assembly
+demo, a GCC-built freestanding C demo, and RV32IM grid math that covers
+`row * 10 + col` and `% 7`. The game-facing registers are included to keep the
+memory map stable.

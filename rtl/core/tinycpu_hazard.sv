@@ -2,7 +2,7 @@
 //
 // The current core globally stalls around AXI-Lite transactions. This module
 // captures the standard load-use hazard rule and branch flush signal so the
-// policy is explicit and can grow in v0.4.
+// policy is explicit and can grow in later overlapped pipeline work.
 module tinycpu_hazard (
     input  logic       id_valid,
     input  logic [4:0] id_rs1,

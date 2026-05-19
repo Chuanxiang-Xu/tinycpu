@@ -1,4 +1,4 @@
-// tinycpu-pynq v0.4-fuller-rv32i-c-support SoC.
+// tinycpu-pynq v0.5-rv32im-m-extension SoC.
 //
 // CPU AXI-Lite master -> AXI-Lite interconnect -> RAM/GPIO slaves.
 module tinycpu_soc #(

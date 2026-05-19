@@ -18,5 +18,6 @@ Regenerate the hex file with:
 python3 programs/led_switch_demo.py
 ```
 
-`led_switch_demo.S` is the human-readable assembly source. The v0.4 C firmware
-flow lives in `programs/c_demo/`.
+`led_switch_demo.S` is the human-readable assembly source. The C firmware flow
+lives in `programs/c_demo/`, and the RV32IM multiply/divide grid-math demo
+lives in `programs/rv32im_demo/`.

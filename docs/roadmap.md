@@ -23,15 +23,22 @@
 - Byte and halfword load/store support with little-endian lane handling.
 - Branch and jump redirect behavior remains resolved in the execute stage.
 
-## v0.5
+## v0.5-rv32im-m-extension
 
-- Implement RV32M multiply/divide instructions.
+- RV32M multiply/divide instructions: `MUL`, `MULH`, `MULHSU`, `MULHU`,
+  `DIV`, `DIVU`, `REM`, and `REMU`.
+- Multi-cycle `tinycpu_muldiv` unit with `start`, `busy`, `done`, and `result`.
+- Core stall/writeback path for M-extension results.
+- Bare-metal C build flow defaults to `-march=rv32im -mabi=ilp32`.
+- RV32IM C demo for grid math such as `row * 10 + col` and `% 7`.
+- cocotb coverage for the mul/div unit and Tetris-like grid math firmware.
+
+## Later
+
 - Replace global bus serialization with clearer valid/bubble pipeline registers.
 - Add explicit forwarding and load-use stall coverage for the overlapped
   pipeline implementation.
 - Add trap/debug reporting for illegal instructions and bus errors.
-
-## Later
 
 - Add Jupyter/Python MMIO bridge flow.
 - Add framebuffer or grid memory.
