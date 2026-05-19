@@ -2,13 +2,20 @@
 
 The target ISA is standard RISC-V `RV32IM`.
 
-v0.5-rv32im-m-extension implements fuller standard `RV32I` coverage plus
-standard RV32M multiply/divide instructions for simple freestanding C compiled
-with a RISC-V GNU toolchain such as
-`riscv64-unknown-elf-gcc -march=rv32im -mabi=ilp32`.
+`v0.5-rv32im-m-extension` implements RV32I plus the standard RV32M
+multiply/divide instructions for simple freestanding programs compiled with a
+RISC-V GNU toolchain.
 
-Instruction fields follow the standard RV32IM encoding tables from the UPenn
-RV32IM ISA Reference Sheet.
+## Implemented Status
+
+- RV32I is implemented.
+- RV32M multiply/divide is implemented in v0.5.
+- 32-bit fixed-length instructions are supported.
+- The compressed `C` extension is not supported.
+- Privileged instructions, CSRs, interrupts, exceptions, atomics, and floating
+  point are not supported.
+- Unsupported instructions halt/trap instead of executing custom behavior.
+- AXI-Lite response codes are not yet surfaced as architectural traps.
 
 ## Formats
 
@@ -88,13 +95,11 @@ RV32IM ISA Reference Sheet.
 Strict rules:
 
 - Standard RISC-V opcodes only.
-- 32-bit fixed-length instructions.
 - Standard register numbering.
 - `x0` is hardwired to zero.
 - Memory is byte-addressed.
 - Loads and stores are little-endian.
 - Reset PC is `0x0000_0000`.
-- Unsupported instructions trap/halt instead of executing custom behavior.
 
 RV32M instructions use OP opcode `0110011`, funct7 `0000001`, and funct3:
 
@@ -109,7 +114,7 @@ RV32M instructions use OP opcode `0110011`, funct7 `0000001`, and funct3:
 | `110` | `REM` |
 | `111` | `REMU` |
 
-References:
+## References
 
 - UPenn RV32IM ISA Reference Sheet:
   `https://www.seas.upenn.edu/~cis2400/24fa/notes/riscv_ref.pdf`

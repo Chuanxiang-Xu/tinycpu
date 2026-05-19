@@ -18,6 +18,11 @@ programs/c_demo/*.bin
 programs/c_demo/*.hex
 programs/c_demo/*.map
 programs/c_demo/*.lst
+programs/rv32im_demo/*.elf
+programs/rv32im_demo/*.bin
+programs/rv32im_demo/*.hex
+programs/rv32im_demo/*.map
+programs/rv32im_demo/*.lst
 
 # Vivado logs and generated files
 .Xil/

@@ -3,7 +3,7 @@ CC      := $(CROSS)-gcc
 OBJCOPY := $(CROSS)-objcopy
 OBJDUMP := $(CROSS)-objdump
 
-MARCH ?= rv32im
+MARCH ?= rv32i
 MABI  ?= ilp32
 ARCH_FLAGS := -march=$(MARCH) -mabi=$(MABI) -mno-relax
 CFLAGS := $(ARCH_FLAGS) -Os -ffreestanding -fno-builtin -fno-pic -Wall -Wextra
@@ -16,7 +16,7 @@ SOURCES := startup.S main.c
 
 all: $(TARGET).hex
 
-$(TARGET).elf: $(SOURCES) linker.ld
+$(TARGET).elf: $(SOURCES) linker.ld Makefile
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ startup.S main.c
 
 $(TARGET).bin: $(TARGET).elf
