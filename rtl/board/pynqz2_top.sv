@@ -1,4 +1,4 @@
-// PYNQ-Z2 board top for tinycpu-pynq v0.4-fuller-rv32i-c-support.
+// PYNQ-Z2 board top for tinycpu-pynq v0.5-rv32im-m-extension.
 //
 // This module only adapts board pins to the SoC. CPU, memory, interconnect,
 // and GPIO internals live under rtl/core, rtl/axil, and rtl/soc.

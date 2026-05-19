@@ -1,8 +1,7 @@
 // Clean-room RV32IM-target tiny CPU with one AXI-Lite master port.
 //
-// v0.4-fuller-rv32i-c-support implements the RV32I integer base needed for
-// simple freestanding C. The project target remains RV32IM; the M extension is
-// intentionally left in tinycpu_muldiv.sv for a later integration step.
+// v0.5-rv32im-m-extension implements the RV32I integer base plus the standard
+// RV32M multiply/divide extension needed by freestanding C compiled for RV32IM.
 //
 // The file is organized around the classic five stages (IF, ID, EX, MEM, WB).
 // Because this teaching SoC has one simple AXI-Lite master for both instruction
@@ -46,6 +45,7 @@ module tinycpu_core_rv32im_axil #(
     localparam logic [3:0] ST_MEM_STORE_RESP = 4'd8;
     localparam logic [3:0] ST_WB             = 4'd9;
     localparam logic [3:0] ST_TRAP           = 4'd10;
+    localparam logic [3:0] ST_MULDIV_WAIT    = 4'd11;
 
     localparam logic [6:0] OPCODE_LUI    = 7'b0110111;
     localparam logic [6:0] OPCODE_AUIPC  = 7'b0010111;
@@ -127,6 +127,10 @@ module tinycpu_core_rv32im_axil #(
     logic        is_store;
     logic        is_op_imm;
     logic        is_op;
+    logic        is_muldiv;
+    logic [2:0]  muldiv_op;
+    logic        muldiv_is_div;
+    logic        muldiv_is_signed;
     logic        illegal;
 
     logic [31:0] rs1_data;
@@ -163,6 +167,10 @@ module tinycpu_core_rv32im_axil #(
     logic [31:0] store_shifted;
     logic [3:0]  store_wstrb;
     logic [31:0] wb_mux_data;
+    logic        muldiv_start;
+    logic        muldiv_busy;
+    logic        muldiv_done;
+    logic [31:0] muldiv_result;
 
     logic unused_h_stall_if;
     logic unused_h_stall_id;
@@ -175,7 +183,7 @@ module tinycpu_core_rv32im_axil #(
         .clk           (clk),
         .rst           (rst),
         .advance       ((state == ST_WB) && !suppress_pc_advance),
-        .redirect_valid(branch_taken),
+        .redirect_valid((state == ST_EX) && branch_taken),
         .redirect_pc   (branch_target),
         .pc            (pc)
     );
@@ -202,6 +210,10 @@ module tinycpu_core_rv32im_axil #(
         .is_store (is_store),
         .is_op_imm(is_op_imm),
         .is_op    (is_op),
+        .is_muldiv(is_muldiv),
+        .muldiv_op(muldiv_op),
+        .muldiv_is_div(muldiv_is_div),
+        .muldiv_is_signed(muldiv_is_signed),
         .illegal  (illegal)
     );
 
@@ -262,6 +274,20 @@ module tinycpu_core_rv32im_axil #(
         .alu_op(alu_op),
         .result(alu_result),
         .eq    (ex_eq)
+    );
+
+    assign muldiv_start = (state == ST_EX) && is_muldiv && !muldiv_busy;
+
+    tinycpu_muldiv muldiv_i (
+        .clk   (clk),
+        .rst   (rst),
+        .start (muldiv_start),
+        .op    (muldiv_op),
+        .rs1   (rs1_data),
+        .rs2   (rs2_data),
+        .busy  (muldiv_busy),
+        .done  (muldiv_done),
+        .result(muldiv_result)
     );
 
     tinycpu_wb_stage wb_stage_i (
@@ -468,7 +494,10 @@ module tinycpu_core_rv32im_axil #(
                         ex_result <= alu_result;
                     end
 
-                    if (is_load) begin
+                    if (is_muldiv) begin
+                        suppress_pc_advance <= 1'b0;
+                        state <= ST_MULDIV_WAIT;
+                    end else if (is_load) begin
                         state <= ST_MEM_LOAD_ADDR;
                     end else if (is_store) begin
                         aw_done <= 1'b0;
@@ -477,6 +506,13 @@ module tinycpu_core_rv32im_axil #(
                     end else begin
                         suppress_pc_advance <= branch_taken;
                         state <= ST_WB;
+                    end
+                end
+
+                ST_MULDIV_WAIT: begin
+                    if (muldiv_done) begin
+                        ex_result <= muldiv_result;
+                        state     <= ST_WB;
                     end
                 end
 
@@ -530,6 +566,7 @@ module tinycpu_core_rv32im_axil #(
     end
 
     wire unused_responses = ^{m_axi_bresp, m_axi_rresp, if_instr, ex_is_store,
+                              muldiv_is_div, muldiv_is_signed,
                               unused_h_stall_if,
                               unused_h_stall_id, unused_h_flush_if_id, unused_h_flush_id_ex};
 

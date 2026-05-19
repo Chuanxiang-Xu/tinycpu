@@ -3,10 +3,8 @@
 `tinycpu-pynq` is a source-first, clean-room educational RISC-V CPU/SoC for the
 PYNQ-Z2 FPGA board.
 
-The long-term ISA target is standard RISC-V `RV32IM`. The current milestone,
-`v0.4-fuller-rv32i-c-support`, implements enough standard `RV32I` to run simple
-freestanding C programs compiled with a RISC-V GNU toolchain. RV32M multiply and
-divide instructions are kept on the roadmap for v0.5.
+The current milestone, `v0.5-rv32im-m-extension`, implements standard `RV32IM`
+for simple freestanding C programs compiled with a RISC-V GNU toolchain.
 
 This repository does not depend on private course solution code, local homework
 directories, generated Vivado projects, or non-public RTL.
@@ -136,7 +134,7 @@ firmware.hex
 The important compiler flags are:
 
 ```text
--march=rv32i -mabi=ilp32 -ffreestanding -nostdlib -nostartfiles
+-march=rv32im -mabi=ilp32 -ffreestanding -nostdlib -nostartfiles
 ```
 
 Check that the reset entry point is at `0x00000000`:
@@ -155,13 +153,30 @@ Run the C firmware in cocotb:
 
 ```sh
 cd ../../sim/cocotb
-make COCOTB_TEST_MODULES=test_v04_firmware_gpio RAM_HEX=../../programs/c_demo/firmware.hex RAM_INIT_WORDS=18
+make COCOTB_TEST_MODULES=test_v04_firmware_gpio RAM_HEX=../../programs/c_demo/firmware.hex RAM_INIT_WORDS=256
 ```
 
 Return to the repository root:
 
 ```sh
 cd ../..
+```
+
+Build and simulate the RV32IM grid-math demo:
+
+```sh
+cd programs/rv32im_demo
+make
+
+cd ../../sim/cocotb
+make COCOTB_TEST_MODULES=test_v05_tetris_grid_math RAM_HEX=../../programs/rv32im_demo/firmware.hex RAM_INIT_WORDS=256
+```
+
+Run the standalone RV32M unit test:
+
+```sh
+cd sim/cocotb
+make TOPLEVEL=tinycpu_muldiv COCOTB_TEST_MODULES=test_v05_muldiv_unit
 ```
 
 ## 3. Build the Pin Smoke Bitstream
@@ -204,7 +219,7 @@ vivado -mode batch -source fpga/vivado/build_bitstream.tcl
 Bitstream:
 
 ```text
-build/vivado/tinycpu_pynq_v0_4_fuller_rv32i_c_support/tinycpu_pynq_v0_4_fuller_rv32i_c_support.runs/impl_1/pynqz2_top.bit
+build/vivado/tinycpu_pynq_v0_5_rv32im_m_extension/tinycpu_pynq_v0_5_rv32im_m_extension.runs/impl_1/pynqz2_top.bit
 ```
 
 Build with the GCC-generated C firmware instead:
@@ -215,14 +230,14 @@ make
 
 cd ../..
 source ~/vivado/2025.2/Vivado/settings64.sh
-TINYCPU_RAM_HEX=programs/c_demo/firmware.hex TINYCPU_RAM_INIT_WORDS=18 \
+TINYCPU_RAM_HEX=programs/c_demo/firmware.hex TINYCPU_RAM_INIT_WORDS=256 \
     vivado -mode batch -source fpga/vivado/build_bitstream.tcl
 ```
 
 The Vivado log should include:
 
 ```text
-RAM_HEX=/absolute/path/to/programs/c_demo/firmware.hex RAM_INIT_WORDS=18
+RAM_HEX=/absolute/path/to/programs/c_demo/firmware.hex RAM_INIT_WORDS=256
 $readmem data file '/absolute/path/to/programs/c_demo/firmware.hex' is read successfully
 ```
 
@@ -245,7 +260,7 @@ Then:
 Use this bitstream for the full CPU demo:
 
 ```text
-build/vivado/tinycpu_pynq_v0_4_fuller_rv32i_c_support/tinycpu_pynq_v0_4_fuller_rv32i_c_support.runs/impl_1/pynqz2_top.bit
+build/vivado/tinycpu_pynq_v0_5_rv32im_m_extension/tinycpu_pynq_v0_5_rv32im_m_extension.runs/impl_1/pynqz2_top.bit
 ```
 
 Expected board behavior:
@@ -306,9 +321,8 @@ for a robust release.
 
 Target ISA: `RV32IM`
 
-Implemented in v0.4: fuller `RV32I` for simple C support.
-
-Planned for v0.5: RV32M multiply/divide integration.
+Implemented in v0.5: `RV32I` plus RV32M multiply/divide instructions for
+`-march=rv32im -mabi=ilp32` freestanding C.
 
 See:
 
@@ -334,6 +348,9 @@ results.xml
 programs/c_demo/firmware.elf
 programs/c_demo/firmware.bin
 programs/c_demo/firmware.hex
+programs/rv32im_demo/firmware.elf
+programs/rv32im_demo/firmware.bin
+programs/rv32im_demo/firmware.hex
 ```
 
 The checked-in files should be enough to rebuild simulation outputs, firmware,

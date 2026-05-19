@@ -1,4 +1,4 @@
-set proj_name tinycpu_pynq_v0_4_fuller_rv32i_c_support
+set proj_name tinycpu_pynq_v0_5_rv32im_m_extension
 set proj_dir  ./build/vivado/$proj_name
 set ram_hex   programs/led_switch_demo.hex
 set ram_words 4

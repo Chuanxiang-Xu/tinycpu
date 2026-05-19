@@ -2,9 +2,10 @@
 
 The target ISA is standard RISC-V `RV32IM`.
 
-v0.4-fuller-rv32i-c-support implements fuller standard `RV32I` coverage for
-simple freestanding C compiled with a RISC-V GNU toolchain such as
-`riscv64-unknown-elf-gcc -march=rv32i -mabi=ilp32`.
+v0.5-rv32im-m-extension implements fuller standard `RV32I` coverage plus
+standard RV32M multiply/divide instructions for simple freestanding C compiled
+with a RISC-V GNU toolchain such as
+`riscv64-unknown-elf-gcc -march=rv32im -mabi=ilp32`.
 
 Instruction fields follow the standard RV32IM encoding tables from the UPenn
 RV32IM ISA Reference Sheet.
@@ -34,7 +35,7 @@ RV32IM ISA Reference Sheet.
 | OP-IMM | `0010011` |
 | OP | `0110011` |
 
-## v0.4 Coverage
+## v0.5 Coverage
 
 | Instruction | Status |
 | --- | --- |
@@ -75,6 +76,14 @@ RV32IM ISA Reference Sheet.
 | `SRA` | Implemented |
 | `OR` | Implemented |
 | `AND` | Implemented |
+| `MUL` | Implemented |
+| `MULH` | Implemented |
+| `MULHSU` | Implemented |
+| `MULHU` | Implemented |
+| `DIV` | Implemented |
+| `DIVU` | Implemented |
+| `REM` | Implemented |
+| `REMU` | Implemented |
 
 Strict rules:
 
@@ -87,13 +96,18 @@ Strict rules:
 - Reset PC is `0x0000_0000`.
 - Unsupported instructions trap/halt instead of executing custom behavior.
 
-Planned RV32M coverage:
+RV32M instructions use OP opcode `0110011`, funct7 `0000001`, and funct3:
 
-- `MUL`, `MULH`, `MULHSU`, `MULHU`
-- `DIV`, `DIVU`, `REM`, `REMU`
-
-RV32M is the v0.5 roadmap item. `tinycpu_muldiv.sv` remains in the source tree,
-but v0.4 does not execute M-extension opcodes.
+| funct3 | Instruction |
+| --- | --- |
+| `000` | `MUL` |
+| `001` | `MULH` |
+| `010` | `MULHSU` |
+| `011` | `MULHU` |
+| `100` | `DIV` |
+| `101` | `DIVU` |
+| `110` | `REM` |
+| `111` | `REMU` |
 
 References:
 

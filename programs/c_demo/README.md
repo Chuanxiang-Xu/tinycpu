@@ -1,6 +1,6 @@
 # C Demo Firmware
 
-This directory builds the v0.4 freestanding C demo for tinycpu.
+This directory builds the freestanding C GPIO demo for tinycpu.
 
 The default tool prefix is `riscv64-unknown-elf`, which is the common multilib
 prefix from riscv-gnu-toolchain. A `riscv32-unknown-elf` toolchain can be used
@@ -13,15 +13,14 @@ make
 make CROSS=riscv32-unknown-elf
 ```
 
-The important v0.4 flags are:
+The default v0.5 flags are:
 
 ```sh
--march=rv32i -mabi=ilp32 -ffreestanding -nostdlib -nostartfiles
+-march=rv32im -mabi=ilp32 -ffreestanding -nostdlib -nostartfiles
 ```
 
-Do not use `-march=rv32im` until the M extension is wired into the execute
-stage. Do not use compressed instructions, libc, `printf`, `malloc`, or OS
-syscalls in v0.4.
+You can still build an RV32I-only comparison binary with `make MARCH=rv32i`.
+Do not use compressed instructions, libc, `printf`, `malloc`, or OS syscalls.
 
 Outputs:
 

@@ -1,4 +1,4 @@
-// RISC-V RV32I decode helper for the tinycpu teaching core.
+// RISC-V RV32IM decode helper for the tinycpu teaching core.
 //
 // This module only decodes standard RISC-V instruction fields and immediates.
 // Unsupported instructions are marked illegal so the core can trap/halt instead
@@ -28,6 +28,10 @@ module tinycpu_decode (
     output logic        is_store,
     output logic        is_op_imm,
     output logic        is_op,
+    output logic        is_muldiv,
+    output logic [2:0]  muldiv_op,
+    output logic        muldiv_is_div,
+    output logic        muldiv_is_signed,
     output logic        illegal
 );
 
@@ -40,6 +44,7 @@ module tinycpu_decode (
     localparam logic [6:0] OPCODE_STORE  = 7'b0100011;
     localparam logic [6:0] OPCODE_OP_IMM = 7'b0010011;
     localparam logic [6:0] OPCODE_OP     = 7'b0110011;
+    localparam logic [6:0] FUNCT7_MULDIV = 7'b0000001;
 
     assign opcode = instr[6:0];
     assign rd     = instr[11:7];
@@ -63,6 +68,11 @@ module tinycpu_decode (
     assign is_store  = (opcode == OPCODE_STORE);
     assign is_op_imm = (opcode == OPCODE_OP_IMM);
     assign is_op     = (opcode == OPCODE_OP);
+    assign is_muldiv = (opcode == OPCODE_OP) && (funct7 == FUNCT7_MULDIV);
+    assign muldiv_op = funct3;
+    assign muldiv_is_div = is_muldiv && funct3[2];
+    assign muldiv_is_signed = is_muldiv && (funct3 != 3'b011) && (funct3 != 3'b101) &&
+                              (funct3 != 3'b111);
 
     always @* begin
         illegal = 1'b0;
@@ -110,17 +120,21 @@ module tinycpu_decode (
             end
 
             OPCODE_OP: begin
-                case (funct3)
-                    3'b000: illegal = !((funct7 == 7'b0000000) || (funct7 == 7'b0100000)); // ADD/SUB
-                    3'b001, // SLL
-                    3'b010, // SLT
-                    3'b011, // SLTU
-                    3'b100, // XOR
-                    3'b110, // OR
-                    3'b111: illegal = (funct7 != 7'b0000000); // AND
-                    3'b101: illegal = !((funct7 == 7'b0000000) || (funct7 == 7'b0100000)); // SRL/SRA
-                    default: illegal = 1'b1;
-                endcase
+                if (funct7 == FUNCT7_MULDIV) begin
+                    illegal = 1'b0;
+                end else begin
+                    case (funct3)
+                        3'b000: illegal = !((funct7 == 7'b0000000) || (funct7 == 7'b0100000)); // ADD/SUB
+                        3'b001, // SLL
+                        3'b010, // SLT
+                        3'b011, // SLTU
+                        3'b100, // XOR
+                        3'b110, // OR
+                        3'b111: illegal = (funct7 != 7'b0000000); // AND
+                        3'b101: illegal = !((funct7 == 7'b0000000) || (funct7 == 7'b0100000)); // SRL/SRA
+                        default: illegal = 1'b1;
+                    endcase
+                end
             end
 
             default: begin
