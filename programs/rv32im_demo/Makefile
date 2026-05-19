@@ -16,7 +16,7 @@ SOURCES := startup.S main.c
 
 all: $(TARGET).hex
 
-$(TARGET).elf: $(SOURCES) linker.ld
+$(TARGET).elf: $(SOURCES) linker.ld Makefile
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ startup.S main.c
 
 $(TARGET).bin: $(TARGET).elf

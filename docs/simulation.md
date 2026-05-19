@@ -1,9 +1,9 @@
 # Simulation
 
-v0.5-rv32im-m-extension uses cocotb and Icarus Verilog for lightweight RTL
+`v0.5-rv32im-m-extension` uses cocotb and Icarus Verilog for lightweight RTL
 simulation.
 
-Setup:
+## Setup
 
 ```sh
 python3 -m venv .venv
@@ -12,43 +12,65 @@ pip install -r requirements.txt
 sudo apt install -y iverilog
 ```
 
-Run:
+Firmware-backed tests also require a RISC-V bare-metal GNU toolchain such as
+`riscv64-unknown-elf-gcc`.
+
+## Test Targets
+
+Run the default smoke test:
 
 ```sh
-cd sim/cocotb
-make
+make -C sim/cocotb
 ```
 
-The test checks the full path:
+Run named tests:
+
+```sh
+make -C sim/cocotb test-v03-gpio
+make -C sim/cocotb test-v04-firmware-gpio
+make -C sim/cocotb test-v05-muldiv
+make -C sim/cocotb test-v05-rv32im-grid
+make -C sim/cocotb test-all
+```
+
+The default and `test-v03-gpio` targets check the full path:
 
 ```text
 program in RAM -> tinycpu_core_rv32im_axil -> AXI-Lite GPIO -> LED
 ```
 
-To run the bare-metal C demo, first build the firmware with a RISC-V GNU
-toolchain:
+`test-v04-firmware-gpio` builds and runs the basic RV32I C GPIO firmware:
 
 ```sh
-cd programs/c_demo
-make
-
-cd ../../sim/cocotb
-make COCOTB_TEST_MODULES=test_v04_firmware_gpio RAM_HEX=../../programs/c_demo/firmware.hex RAM_INIT_WORDS=256
+make -C programs/c_demo
+make -C sim/cocotb test-v04-firmware-gpio
 ```
 
-Run the RV32M unit test:
+`test-v05-muldiv` runs the standalone RV32M multiply/divide unit test:
 
 ```sh
-cd sim/cocotb
-make TOPLEVEL=tinycpu_muldiv COCOTB_TEST_MODULES=test_v05_muldiv_unit
+make -C sim/cocotb test-v05-muldiv
 ```
 
-Run the RV32IM grid-math firmware test:
+`test-v05-rv32im-grid` builds and runs the RV32IM grid math firmware:
 
 ```sh
-cd programs/rv32im_demo
-make
+make -C programs/rv32im_demo
+make -C sim/cocotb test-v05-rv32im-grid
+```
 
-cd ../../sim/cocotb
-make COCOTB_TEST_MODULES=test_v05_tetris_grid_math RAM_HEX=../../programs/rv32im_demo/firmware.hex RAM_INIT_WORDS=256
+## Generated Outputs
+
+cocotb and firmware outputs are generated artifacts and should stay out of
+version control:
+
+```text
+sim_build/
+results.xml
+programs/c_demo/firmware.elf
+programs/c_demo/firmware.bin
+programs/c_demo/firmware.hex
+programs/rv32im_demo/firmware.elf
+programs/rv32im_demo/firmware.bin
+programs/rv32im_demo/firmware.hex
 ```

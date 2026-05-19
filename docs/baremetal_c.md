@@ -1,16 +1,7 @@
 # Bare-Metal C
 
-v0.5 supports simple freestanding C programs compiled to standard RV32IM.
-
-The demo lives in `programs/c_demo/`:
-
-- `startup.S`
-- `linker.ld`
-- `main.c`
-- `Makefile`
-- generated `firmware.elf`
-- generated `firmware.bin`
-- generated `firmware.hex`
+tinycpu v0.5 supports simple freestanding C programs for the implemented
+RV32I/RV32M instruction set.
 
 ## Toolchain
 
@@ -30,38 +21,57 @@ the RV32 flags. A `riscv32-unknown-elf` toolchain can also be used:
 make -C programs/c_demo CROSS=riscv32-unknown-elf
 ```
 
-Default v0.5 code-generation flags:
-
-```sh
--march=rv32im -mabi=ilp32
-```
-
 Required freestanding/link flags:
 
-```sh
+```text
 -ffreestanding -nostdlib -nostartfiles
 ```
 
-The `programs/c_demo/Makefile` exposes `MARCH` and `MABI`, so RV32I fallback
-builds are still possible for comparison:
+Do not use these in v0.5 firmware:
 
-```sh
-make -C programs/c_demo MARCH=rv32i
+- Compressed instructions.
+- libc.
+- `printf`.
+- `malloc`.
+- OS syscalls.
+
+## Basic RV32I GPIO Demo
+
+`programs/c_demo/` is the basic bare-metal C GPIO demo:
+
+- `startup.S`
+- `linker.ld`
+- `main.c`
+- `Makefile`
+- generated `firmware.elf`
+- generated `firmware.bin`
+- generated `firmware.hex`
+
+It defaults to:
+
+```text
+-march=rv32i -mabi=ilp32
 ```
 
-Do not use these in v0.5:
+Build it with:
 
-- compressed instructions
-- libc
-- `printf`
-- `malloc`
-- OS syscalls
+```sh
+make -C programs/c_demo
+```
 
 ## RV32IM Demo
 
-`programs/rv32im_demo/` exercises C operations that lower to M-extension
+`programs/rv32im_demo/` exercises operations that lower to M-extension
 instructions, including `row * 10 + col`, `% 7`, signed division, and signed
 remainder.
+
+It defaults to:
+
+```text
+-march=rv32im -mabi=ilp32
+```
+
+Build it with:
 
 ```sh
 make -C programs/rv32im_demo

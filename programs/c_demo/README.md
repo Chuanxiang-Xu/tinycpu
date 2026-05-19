@@ -13,13 +13,13 @@ make
 make CROSS=riscv32-unknown-elf
 ```
 
-The default v0.5 flags are:
+The default flags are:
 
 ```sh
--march=rv32im -mabi=ilp32 -ffreestanding -nostdlib -nostartfiles
+-march=rv32i -mabi=ilp32 -ffreestanding -nostdlib -nostartfiles
 ```
 
-You can still build an RV32I-only comparison binary with `make MARCH=rv32i`.
+The RV32IM multiply/divide/grid math demo lives in `programs/rv32im_demo/`.
 Do not use compressed instructions, libc, `printf`, `malloc`, or OS syscalls.
 
 Outputs:
