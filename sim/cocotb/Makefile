@@ -34,6 +34,7 @@ COMPILE_ARGS += \
 
 .PHONY: test-v03-gpio test-v04-firmware-gpio test-v05-muldiv
 .PHONY: test-v05-rv32im-grid test-all firmware-c-demo firmware-rv32im-demo
+.PHONY: test-v05-rv32i-directed test-v05-branch-load-store
 
 test-v03-gpio:
 	$(MAKE) sim \
@@ -60,6 +61,28 @@ test-v05-muldiv:
 		TOPLEVEL=tinycpu_muldiv \
 		SIM_BUILD=sim_build/test-v05-muldiv
 
+sim_build/test-v05-rv32i-directed/program.hex: tinycpu_test_programs.py
+	python3 tinycpu_test_programs.py rv32i-directed $@
+
+test-v05-rv32i-directed: sim_build/test-v05-rv32i-directed/program.hex
+	$(MAKE) sim \
+		COCOTB_TEST_MODULES=test_v05_rv32i_directed \
+		TOPLEVEL=tinycpu_soc \
+		RAM_HEX=sim_build/test-v05-rv32i-directed/program.hex \
+		RAM_INIT_WORDS=128 \
+		SIM_BUILD=sim_build/test-v05-rv32i-directed
+
+sim_build/test-v05-branch-load-store/program.hex: tinycpu_test_programs.py
+	python3 tinycpu_test_programs.py branch-load-store $@
+
+test-v05-branch-load-store: sim_build/test-v05-branch-load-store/program.hex
+	$(MAKE) sim \
+		COCOTB_TEST_MODULES=test_v05_branch_load_store \
+		TOPLEVEL=tinycpu_soc \
+		RAM_HEX=sim_build/test-v05-branch-load-store/program.hex \
+		RAM_INIT_WORDS=128 \
+		SIM_BUILD=sim_build/test-v05-branch-load-store
+
 firmware-rv32im-demo:
 	$(MAKE) -C $(ROOT_DIR)/programs/rv32im_demo
 
@@ -71,6 +94,8 @@ test-v05-rv32im-grid: firmware-rv32im-demo
 		RAM_INIT_WORDS=256 \
 		SIM_BUILD=sim_build/test-v05-rv32im-grid
 
-test-all: test-v03-gpio test-v04-firmware-gpio test-v05-muldiv test-v05-rv32im-grid
+test-all: test-v03-gpio test-v04-firmware-gpio test-v05-muldiv
+test-all: test-v05-rv32i-directed test-v05-branch-load-store
+test-all: test-v05-rv32im-grid
 
 include $(shell cocotb-config --makefiles)/Makefile.sim

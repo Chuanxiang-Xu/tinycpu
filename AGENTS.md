@@ -51,6 +51,8 @@ Named cocotb tests:
 make -C sim/cocotb test-v03-gpio
 make -C sim/cocotb test-v04-firmware-gpio
 make -C sim/cocotb test-v05-muldiv
+make -C sim/cocotb test-v05-rv32i-directed
+make -C sim/cocotb test-v05-branch-load-store
 make -C sim/cocotb test-v05-rv32im-grid
 make -C sim/cocotb test-all
 ```
@@ -374,3 +376,52 @@ Next:
 
 - Run the GitHub Actions workflow on the remote branch and run the Vivado Tcl
   flow on a machine with Vivado installed.
+
+### 2026-05-19 - add RV32I directed cocotb coverage
+
+Changed:
+
+- `sim/cocotb/tinycpu_test_programs.py`: added a small source generator for
+  temporary RV32I RAM hex programs used by cocotb tests.
+- `sim/cocotb/test_v05_rv32i_directed.py`: added directed ALU, immediate,
+  jump, and `x0` suppression coverage.
+- `sim/cocotb/test_v05_branch_load_store.py`: added branch direction and
+  byte/halfword load-store edge coverage.
+- `sim/cocotb/Makefile`: added `test-v05-rv32i-directed` and
+  `test-v05-branch-load-store`; included both in `test-all`.
+- `README.md`: listed the new simulation targets.
+- `docs/simulation.md`: documented the generated-hex directed tests.
+- `docs/verification.md`: moved initial RV32I directed and branch/load-store
+  coverage into the existing-tests section and narrowed the remaining gaps.
+- `AGENTS.md`: recorded the new test coverage and validation status.
+
+Reason:
+
+- Start closing the verification gaps documented for RV32I directed behavior,
+  branch handling, and load/store byte-enable behavior without committing
+  generated `.hex` artifacts.
+
+Validation:
+
+- `command -v vivado` failed, so the Vivado Tcl bitstream flow could not be run
+  in this local environment.
+- GitHub Actions public API showed run `26126543631` on `main` completed with
+  conclusion `success`; its `cocotb` job and `Install system dependencies`
+  step also completed successfully.
+- `python3 sim/cocotb/tinycpu_test_programs.py rv32i-directed /tmp/rv32i.hex`
+  passed.
+- `python3 sim/cocotb/tinycpu_test_programs.py branch-load-store /tmp/branch.hex`
+  passed.
+- `make -C sim/cocotb test-v05-rv32i-directed` passed with
+  `TESTS=1 PASS=1 FAIL=0`.
+- `make -C sim/cocotb test-v05-branch-load-store` passed with
+  `TESTS=1 PASS=1 FAIL=0`.
+- `make -C sim/cocotb test-all` passed the expanded six-test suite:
+  `test-v03-gpio`, `test-v04-firmware-gpio`, `test-v05-muldiv`,
+  `test-v05-rv32i-directed`, `test-v05-branch-load-store`, and
+  `test-v05-rv32im-grid`.
+
+Next:
+
+- Push the follow-up test coverage branch and confirm the expanded GitHub
+  Actions run.
