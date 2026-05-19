@@ -29,6 +29,8 @@ Run named tests:
 make -C sim/cocotb test-v03-gpio
 make -C sim/cocotb test-v04-firmware-gpio
 make -C sim/cocotb test-v05-muldiv
+make -C sim/cocotb test-v05-rv32i-directed
+make -C sim/cocotb test-v05-branch-load-store
 make -C sim/cocotb test-v05-rv32im-grid
 make -C sim/cocotb test-all
 ```
@@ -50,6 +52,20 @@ make -C sim/cocotb test-v04-firmware-gpio
 
 ```sh
 make -C sim/cocotb test-v05-muldiv
+```
+
+`test-v05-rv32i-directed` generates a temporary RAM hex file and runs directed
+RV32I ALU, immediate, jump, and `x0` checks:
+
+```sh
+make -C sim/cocotb test-v05-rv32i-directed
+```
+
+`test-v05-branch-load-store` generates a temporary RAM hex file and runs branch
+direction plus byte/halfword load-store checks:
+
+```sh
+make -C sim/cocotb test-v05-branch-load-store
 ```
 
 `test-v05-rv32im-grid` builds and runs the RV32IM grid math firmware:

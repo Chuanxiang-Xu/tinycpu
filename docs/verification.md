@@ -8,15 +8,20 @@ This page tracks the current verification coverage for
 - GPIO SoC smoke test: `make -C sim/cocotb test-v03-gpio`.
 - Firmware GPIO test: `make -C sim/cocotb test-v04-firmware-gpio`.
 - RV32M mul/div unit test: `make -C sim/cocotb test-v05-muldiv`.
+- RV32I directed ALU/immediate/jump/`x0` test:
+  `make -C sim/cocotb test-v05-rv32i-directed`.
+- Branch/load-store edge test:
+  `make -C sim/cocotb test-v05-branch-load-store`.
 - RV32IM grid math firmware test:
   `make -C sim/cocotb test-v05-rv32im-grid`.
 
 ## Missing Tests
 
-- RV32I per-instruction directed tests.
-- Branch/jump tests.
-- Load/store byte-enable tests.
-- `x0` write suppression.
+- Full RV32I per-instruction directed matrix.
+- More branch/jump edge cases, including negative offsets and link register
+  checks.
+- More load/store byte-enable combinations and unaligned halfword policy
+  coverage.
 - Signed/unsigned comparison edge cases.
 - Divide-by-zero.
 - `INT_MIN / -1` signed overflow.

@@ -149,6 +149,8 @@ Run the named test targets:
 make -C sim/cocotb test-v03-gpio
 make -C sim/cocotb test-v04-firmware-gpio
 make -C sim/cocotb test-v05-muldiv
+make -C sim/cocotb test-v05-rv32i-directed
+make -C sim/cocotb test-v05-branch-load-store
 make -C sim/cocotb test-v05-rv32im-grid
 make -C sim/cocotb test-all
 ```
@@ -156,6 +158,7 @@ make -C sim/cocotb test-all
 `test-v04-firmware-gpio` builds `programs/c_demo/firmware.hex` first.
 `test-v05-rv32im-grid` builds `programs/rv32im_demo/firmware.hex` first.
 Both firmware-backed tests require a RISC-V GNU toolchain.
+The directed RV32I tests generate temporary RAM hex files under `sim_build/`.
 
 Expected cocotb result:
 
@@ -206,6 +209,13 @@ Run the standalone RV32M unit test:
 
 ```sh
 make -C sim/cocotb test-v05-muldiv
+```
+
+Run the directed RV32I and branch/load-store edge tests:
+
+```sh
+make -C sim/cocotb test-v05-rv32i-directed
+make -C sim/cocotb test-v05-branch-load-store
 ```
 
 ## Build the Pin Smoke Bitstream
