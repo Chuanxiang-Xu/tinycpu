@@ -32,6 +32,24 @@ SIM ?= icarus
 RAM_HEX ?= ../../programs/led_switch_demo.hex
 RAM_INIT_WORDS ?= 4
 
+RISCV_TEST_BUILD = $(ROOT_DIR)/build/riscv-tests
+RISCV_TEST_TIMEOUT ?= 20000
+export RISCV_TEST_NAME
+export RISCV_EXPECT_FAIL
+export RISCV_TEST_TIMEOUT
+RV32UI_TESTS = \
+	smoke_add \
+	add addi sub and andi or ori xor xori \
+	sll slli srl srli sra srai \
+	slt slti sltu sltiu \
+	lui auipc jal jalr \
+	beq bne blt bge bltu bgeu \
+	lw lb lbu lh lhu sw sb sh
+RV32UM_TESTS = \
+	mul mulh mulhsu mulhu \
+	div divu rem remu \
+	m_pipeline
+
 COMPILE_ARGS += \
 	-g2012 \
 	-P tinycpu_soc.RAM_HEX=\"$(RAM_HEX)\" \
@@ -43,6 +61,8 @@ COMPILE_ARGS += \
 .PHONY: test-v06-bram test-v06-axil-loader test-v06-pipeline-overlap
 .PHONY: test-v06-forwarding test-v06-load-use test-v06-branch-flush
 .PHONY: test-v06-pipeline
+.PHONY: build-riscv-tests test-riscv-smoke test-rv32ui test-rv32um
+.PHONY: test-riscv-isa
 
 test-v03-gpio:
 	$(MAKE) sim \
@@ -153,6 +173,54 @@ test-v06-pipeline: test-v06-bram test-v06-pipeline-overlap
 test-v06-pipeline: test-v06-forwarding test-v06-load-use
 test-v06-pipeline: test-v06-branch-flush test-v06-axil-loader
 
+build-riscv-tests:
+	python3 build_riscv_tests.py
+
+test-riscv-smoke: build-riscv-tests
+	$(MAKE) sim \
+		COCOTB_TEST_MODULES=test_riscv_isa \
+		TOPLEVEL=tinycpu_soc \
+		RAM_HEX=$(RISCV_TEST_BUILD)/rv32ui/smoke_add/smoke_add.hex \
+		RAM_INIT_WORDS=256 \
+		RISCV_TEST_NAME=rv32ui/smoke_add \
+		RISCV_TEST_TIMEOUT=$(RISCV_TEST_TIMEOUT) \
+		SIM_BUILD=sim_build/test-riscv-smoke-pass
+	$(MAKE) sim \
+		COCOTB_TEST_MODULES=test_riscv_isa \
+		TOPLEVEL=tinycpu_soc \
+		RAM_HEX=$(RISCV_TEST_BUILD)/rv32ui/fail_status/fail_status.hex \
+		RAM_INIT_WORDS=256 \
+		RISCV_TEST_NAME=rv32ui/fail_status \
+		RISCV_EXPECT_FAIL=1 \
+		RISCV_TEST_TIMEOUT=$(RISCV_TEST_TIMEOUT) \
+		SIM_BUILD=sim_build/test-riscv-smoke-fail
+
+test-rv32ui: build-riscv-tests
+	set -e; for test in $(RV32UI_TESTS); do \
+		$(MAKE) sim \
+			COCOTB_TEST_MODULES=test_riscv_isa \
+			TOPLEVEL=tinycpu_soc \
+			RAM_HEX=$(RISCV_TEST_BUILD)/rv32ui/$$test/$$test.hex \
+			RAM_INIT_WORDS=256 \
+			RISCV_TEST_NAME=rv32ui/$$test \
+			RISCV_TEST_TIMEOUT=$(RISCV_TEST_TIMEOUT) \
+			SIM_BUILD=sim_build/test-rv32ui-$$test; \
+	done
+
+test-rv32um: build-riscv-tests
+	set -e; for test in $(RV32UM_TESTS); do \
+		$(MAKE) sim \
+			COCOTB_TEST_MODULES=test_riscv_isa \
+			TOPLEVEL=tinycpu_soc \
+			RAM_HEX=$(RISCV_TEST_BUILD)/rv32um/$$test/$$test.hex \
+			RAM_INIT_WORDS=256 \
+			RISCV_TEST_NAME=rv32um/$$test \
+			RISCV_TEST_TIMEOUT=$(RISCV_TEST_TIMEOUT) \
+			SIM_BUILD=sim_build/test-rv32um-$$test; \
+	done
+
+test-riscv-isa: test-rv32ui test-rv32um
+
 firmware-rv32im-demo:
 	$(MAKE) -C $(ROOT_DIR)/programs/rv32im_demo
 
@@ -166,5 +234,6 @@ test-v05-rv32im-grid: firmware-rv32im-demo
 
 test-all: test-v03-gpio test-v04-firmware-gpio test-v05-muldiv
 test-all: test-v06-pipeline
+test-all: test-riscv-smoke
 
 include $(shell cocotb-config --makefiles)/Makefile.sim

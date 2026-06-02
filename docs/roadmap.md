@@ -5,7 +5,7 @@
 - RV32IM target documented.
 - Standard RV32I bring-up subset.
 - Five-stage structure files.
-- AXI-Lite RAM.
+- Legacy AXI-Lite RAM path.
 - AXI-Lite GPIO.
 - AXI-Lite interconnect.
 - PYNQ-Z2 bitstream flow.
@@ -24,7 +24,6 @@
 
 ## v0.5-rv32im-m-extension
 
-- Current milestone.
 - RV32M multiply/divide instructions: `MUL`, `MULH`, `MULHSU`, `MULHU`, `DIV`,
   `DIVU`, `REM`, and `REMU`.
 - Multi-cycle `tinycpu_muldiv` unit with `start`, `busy`, `done`, and `result`.
@@ -34,14 +33,26 @@
 - RV32IM C demo for grid math such as `row * 10 + col` and `% 7`.
 - cocotb coverage for the mul/div unit and RV32IM grid math firmware.
 
-## v0.6 Pipeline BRAM Loader Work In Progress
+## v0.6-pipeline-bram-loader
 
+- Current milestone.
 - Replace global bus serialization with valid/bubble pipeline registers.
 - Move the CPU core to Harvard-style simple imem/dmem ports.
 - Add unified 64 KiB BRAM, dmem MMIO decoder, and AXI-Lite loader/control
   slave.
-- Finish forwarding, load-use, branch flush, and RV32M integration until the
-  directed and firmware regressions all pass again.
+- Keep the pipeline readable for teaching: explicit stage registers,
+  forwarding choices, load-use stalls, branch flushes, and RV32M stalls.
+- Add focused cocotb coverage for BRAM behavior, loader control, pipeline
+  overlap, forwarding, load-use stalls, and branch/jump flushing.
+- Add selected clean-room rv32ui-style and rv32um-style ISA simulation tests
+  without vendoring the external `riscv-tests` repository.
+
+## Follow-Up Work
+
+- Realign the older v0.5 directed/grid regression expectations with the v0.6
+  pipeline core.
+- Restore or document FPGA-oriented synchronous instruction BRAM timing if the
+  implementation changes from the current simple imem model.
 
 ## Later
 

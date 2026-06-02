@@ -1,7 +1,8 @@
 # Programs
 
-`led_switch_demo.hex` is loaded into AXI-Lite RAM at address `0x0000_0000`.
-It contains standard 32-bit RISC-V instructions from the RV32I ISA.
+`led_switch_demo.hex` is loaded into the unified 64 KiB BRAM at address
+`0x0000_0000`. It contains standard 32-bit RISC-V instructions from the RV32I
+ISA.
 
 The demo implements:
 
