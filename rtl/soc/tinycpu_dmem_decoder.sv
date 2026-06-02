@@ -33,6 +33,8 @@ module tinycpu_dmem_decoder #(
     localparam logic [31:0] GAME_STATUS_OFFSET = 32'h0000_0014;
     localparam logic [31:0] FRAMEBUFFER_BASE   = 32'h0000_0100;
     localparam logic [31:0] FRAMEBUFFER_LAST   = 32'h0000_01FF;
+    localparam logic [31:0] TEST_STATUS_OFFSET = 32'h0000_0FF0;
+    localparam logic [31:0] TEST_CODE_OFFSET   = 32'h0000_0FF4;
 
     logic        req_is_ram_q;
     logic        req_is_mmio_q;
@@ -41,6 +43,8 @@ module tinycpu_dmem_decoder #(
     logic [31:0] led_reg;
     logic [31:0] game_input_reg;
     logic [31:0] game_status_reg;
+    logic [31:0] test_status_reg;
+    logic [31:0] test_code_reg;
     logic [31:0] framebuffer [0:63];
 
     logic is_ram;
@@ -78,6 +82,8 @@ module tinycpu_dmem_decoder #(
             led_reg        <= 32'h0000_0000;
             game_input_reg <= 32'h0000_0000;
             game_status_reg <= 32'h0000_0000;
+            test_status_reg <= 32'h0000_0000;
+            test_code_reg   <= 32'h0000_0000;
             for (i = 0; i < 64; i = i + 1) begin
                 framebuffer[i] <= 32'h0000_0000;
             end
@@ -107,6 +113,19 @@ module tinycpu_dmem_decoder #(
                             game_status_reg[lane * 8 +: 8] <= dmem_wdata[lane * 8 +: 8];
                         end
                     end
+                end else if (mmio_offset == TEST_STATUS_OFFSET) begin
+                    for (lane = 0; lane < 4; lane = lane + 1) begin
+                        if (dmem_wstrb[lane]) begin
+                            test_status_reg[lane * 8 +: 8] <=
+                                dmem_wdata[lane * 8 +: 8];
+                        end
+                    end
+                end else if (mmio_offset == TEST_CODE_OFFSET) begin
+                    for (lane = 0; lane < 4; lane = lane + 1) begin
+                        if (dmem_wstrb[lane]) begin
+                            test_code_reg[lane * 8 +: 8] <= dmem_wdata[lane * 8 +: 8];
+                        end
+                    end
                 end else if (write_framebuffer) begin
                     for (lane = 0; lane < 4; lane = lane + 1) begin
                         if (dmem_wstrb[lane]) begin
@@ -125,6 +144,8 @@ module tinycpu_dmem_decoder #(
                     SW_OFFSET:          dmem_rdata <= {30'b0, sw};
                     GAME_INPUT_OFFSET:  dmem_rdata <= game_input_reg;
                     GAME_STATUS_OFFSET: dmem_rdata <= game_status_reg;
+                    TEST_STATUS_OFFSET: dmem_rdata <= test_status_reg;
+                    TEST_CODE_OFFSET:   dmem_rdata <= test_code_reg;
                     default: begin
                         if (read_framebuffer_q) begin
                             dmem_rdata <= framebuffer[req_offset_q[7:2]];

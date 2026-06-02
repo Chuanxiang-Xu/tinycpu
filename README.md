@@ -30,7 +30,7 @@ directories, generated Vivado projects, or non-public RTL.
 - AXI-Lite loader/control slave at the SoC boundary.
 - PYNQ-Z2 LED/switch MMIO demo through the dmem-side MMIO decoder.
 - Vivado Hardware Manager bitstream programming flow.
-- PYNQ Overlay/Jupyter flow is planned later.
+- PYNQ Overlay/Jupyter program-loading demo is planned for v0.7.
 
 ## Teaching Path
 
@@ -84,8 +84,8 @@ vivado -mode batch -source fpga/vivado/build_bitstream.tcl
 ## Repository Layout
 
 ```text
-rtl/core/       RV32IM-target core, stage helpers, regfile, ALU, mul/div
-rtl/bus/        AXI-Lite bus/control modules, including the loader
+rtl/core/       RV32IM-target pipeline core, regfile, ALU, forwarding, mul/div
+rtl/bus/        AXI-Lite loader/control module
 rtl/mem/        Unified BRAM and memory-oriented building blocks
 rtl/soc/        SoC integration
 rtl/board/      PYNQ-Z2 board tops, including pin smoke test
@@ -198,7 +198,8 @@ The v0.6 pipeline tests also generate temporary RAM hex files under
 load-use, and branch-flush coverage together.
 The RISC-V ISA simulation tests build tinycpu-owned assembly programs into
 ELF, HEX, BIN, and DUMP files under `build/riscv-tests/`, preload the unified
-BRAM, and watch a test-only MMIO pass/fail write:
+BRAM, and watch the CPU-side MMIO test status registers at
+`0x1000_0FF0` / `0x1000_0FF4`:
 
 ```sh
 make -C sim/cocotb test-riscv-smoke
@@ -210,9 +211,11 @@ make -C sim/cocotb test-riscv-isa
 These targets pass a selected rv32ui-style and rv32um-style subset in
 simulation, including byte/halfword loads and an M-result pipeline stress
 case. They are not a full RISC-V compliance claim.
-The `test-all` target is the CI aggregate for the current v0.6 branch: GPIO
-smoke, C GPIO firmware, standalone RV32M mul/div, the v0.6 pipeline suite, and
-the RISC-V ISA smoke target.
+The `test-all` target is the first CI aggregate for the current v0.6 branch:
+GPIO smoke, C GPIO firmware, standalone RV32M mul/div, the v0.6 pipeline
+suite, and the RISC-V ISA smoke target. GitHub Actions also runs
+`test-riscv-isa` so the selected rv32ui-style and rv32um-style tests are
+covered before release.
 The older v0.5 directed/grid tests remain available as individual regression
 targets while they are being realigned with the v0.6 pipeline core.
 
@@ -374,6 +377,15 @@ CPU-side map:
 | `0x1000_0010` | Future game input register |
 | `0x1000_0014` | Future game status register |
 | `0x1000_0100 - 0x1000_01FF` | Future game grid/framebuffer window |
+| `0x1000_0FF0` | RISC-V ISA test status register |
+| `0x1000_0FF4` | RISC-V ISA test code register |
+
+ISA test result registers:
+
+| Address | Name | Meaning |
+| --- | --- | --- |
+| `0x1000_0FF0` | `TEST_STATUS` | `0 = idle`, `1 = pass`, other nonzero = fail |
+| `0x1000_0FF4` | `TEST_CODE` | Optional failing test/debug code |
 
 Loader-side AXI-Lite map:
 
@@ -394,7 +406,15 @@ Loader-side AXI-Lite map:
 - [Bare-metal C](docs/baremetal_c.md)
 - [Memory map](docs/memory_map.md)
 - [Verification](docs/verification.md)
+- [Release checklist](docs/release_checklist.md)
+- [v0.6 release notes draft](docs/releases/v0.6-pipeline-bram-isa-tests.md)
 - [Roadmap](docs/roadmap.md)
+
+## Demo Media
+
+Board demo media can be added under `docs/images/` after a real PYNQ-Z2 run,
+for example `docs/images/pynqz2_led_demo.gif`. The README intentionally does
+not reference screenshots or GIFs until those files actually exist.
 
 ## Rebuild the Hand-Written Demo Hex
 

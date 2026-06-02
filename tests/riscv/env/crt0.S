@@ -5,7 +5,7 @@ _start:
     call test_main
 
     /* Returning from a test body is considered success. */
-    li t0, 0x80000000
+    li t0, 0x10000FF0
     li t1, 1
     sw t1, 0(t0)
 1:

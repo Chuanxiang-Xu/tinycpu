@@ -40,9 +40,11 @@ Current local v0.6 status:
   subset listed below.
 - `make -C sim/cocotb test-rv32um` passes the selected RV32M clean-room test
   subset listed below.
-- `make -C sim/cocotb test-all` is the CI aggregate for this branch and runs
-  GPIO smoke, C GPIO firmware, standalone RV32M mul/div, the v0.6 pipeline
-  suite, and the RISC-V ISA smoke target.
+- `make -C sim/cocotb test-all` is the first CI aggregate for this branch and
+  runs GPIO smoke, C GPIO firmware, standalone RV32M mul/div, the v0.6
+  pipeline suite, and the RISC-V ISA smoke target.
+- GitHub Actions also runs `make -C sim/cocotb test-riscv-isa` so the selected
+  rv32ui-style and rv32um-style tests are covered before release.
 - The older v0.5 directed and grid firmware targets remain individually
   runnable. They are kept separate from `test-all` while their expectations are
   reviewed against the v0.6 pipeline/BRAM architecture.
@@ -59,12 +61,13 @@ They use a minimal freestanding environment:
 - `tests/riscv/env/tinycpu_test_macros.S`: defines `TEST_PASS`,
   `TEST_FAIL`, `CHECK_EQ`, and `CHECK_REG`.
 
-The test-only MMIO convention is:
+The ISA tests use CPU-side dmem MMIO result registers in the normal
+`0x1000_0000 - 0x1000_0FFF` MMIO page:
 
 | Address | Meaning |
 | --- | --- |
-| `0x8000_0000` | `MMIO_TEST_STATUS`; write `1` for pass, non-`1` for fail |
-| `0x8000_0004` | `MMIO_TEST_CODE`; optional debug/fail code |
+| `0x1000_0FF0` | `TEST_STATUS`; `0 = idle`, `1 = pass`, other nonzero = fail |
+| `0x1000_0FF4` | `TEST_CODE`; optional failing test/debug code |
 
 The build flow detects `riscv64-unknown-elf-*` or `riscv32-unknown-elf-*` and
 generates `.elf`, `.bin`, `.hex`, and `.dump` outputs under

@@ -8,6 +8,8 @@
 | `0x1000_0010` | dmem MMIO | Future game input register |
 | `0x1000_0014` | dmem MMIO | Future game status register |
 | `0x1000_0100 - 0x1000_01FF` | dmem MMIO | Future 10x20 grid/framebuffer window |
+| `0x1000_0FF0` | dmem MMIO | RISC-V ISA test status register: `0 = idle`, `1 = pass`, other nonzero = fail |
+| `0x1000_0FF4` | dmem MMIO | RISC-V ISA test code register: optional failing test/debug code |
 
 The AXI-Lite loader/control slave has its own PS-visible local map:
 

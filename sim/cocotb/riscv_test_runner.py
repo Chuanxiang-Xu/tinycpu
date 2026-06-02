@@ -9,8 +9,8 @@ from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
 
 
-MMIO_TEST_STATUS = 0x80000000
-MMIO_TEST_CODE = 0x80000004
+MMIO_TEST_STATUS = 0x10000FF0
+MMIO_TEST_CODE = 0x10000FF4
 
 
 @dataclass

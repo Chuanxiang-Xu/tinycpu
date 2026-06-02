@@ -17,14 +17,12 @@ The CPU core no longer has an AXI-Lite master. It uses simple instruction and
 data ports, with AXI-Lite loader/control logic moved to the SoC boundary. The
 new pipeline implementation is centered in:
 
-- `tinycpu_if_stage.sv`
-- `tinycpu_id_stage.sv`
-- `tinycpu_ex_stage.sv`
-- `tinycpu_mem_stage.sv`
-- `tinycpu_wb_stage.sv`
-- `tinycpu_hazard.sv`
-- `tinycpu_forwarding.sv`
 - `tinycpu_core_pipe.sv`
+- `tinycpu_forwarding.sv`
+- `tinycpu_muldiv.sv`
+- `tinycpu_regfile.sv`
+- `tinycpu_alu.sv`
+- `tinycpu_decode.sv`
 
 Current hazard policy:
 
@@ -34,10 +32,8 @@ Current hazard policy:
   writeback point, then insert the needed bubble into ID/EX.
 - Taken branches and jumps flush younger instructions.
 - `x0` writes are suppressed in the register file.
-- RV32M instructions start `tinycpu_muldiv`, hold in `ST_MULDIV_WAIT` while
-  `muldiv_busy` is asserted, and write back when `muldiv_done` pulses.
-- `tinycpu_hazard.sv` contains explicit load-use and branch flush policy hooks
-  for a later overlapped pipeline.
+- RV32M instructions start `tinycpu_muldiv`, assert the pipeline stall while
+  the M unit is active, and write back when `muldiv_done` pulses.
 
 Teaching notes:
 
