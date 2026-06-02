@@ -16,6 +16,7 @@ make -C sim/cocotb test-all
 make -C sim/cocotb test-riscv-smoke
 make -C sim/cocotb test-rv32ui
 make -C sim/cocotb test-rv32um
+make -C sim/cocotb test-riscv-isa
 ```
 
 Manual GitHub steps after merge:
