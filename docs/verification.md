@@ -28,6 +28,9 @@ Current local v0.6 status:
   load-use stall fix.
 - `make -C sim/cocotb test-v06-pipeline` passes the v0.6 BRAM, loader,
   overlap, forwarding, load-use, and branch-flush suite.
+- `make -C sim/cocotb test-all` is the CI aggregate for this branch and runs
+  GPIO smoke, C GPIO firmware, standalone RV32M mul/div, and the v0.6 pipeline
+  suite.
 - `make -C sim/cocotb test-v05-rv32i-directed` currently fails in the
   JAL/JALR/control-flow tail.
 - `make -C sim/cocotb test-v05-branch-load-store` currently fails early in the

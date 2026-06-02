@@ -169,6 +169,10 @@ The directed RV32I tests generate temporary RAM hex files under `sim_build/`.
 The v0.6 pipeline tests also generate temporary RAM hex files under
 `sim_build/`; `test-v06-pipeline` runs the BRAM, loader, overlap, forwarding,
 load-use, and branch-flush coverage together.
+The `test-all` target is the CI aggregate for the current v0.6 branch: GPIO
+smoke, C GPIO firmware, standalone RV32M mul/div, and the v0.6 pipeline suite.
+The older v0.5 directed/grid tests remain available as individual regression
+targets while they are being realigned with the v0.6 pipeline core.
 
 Expected cocotb result:
 

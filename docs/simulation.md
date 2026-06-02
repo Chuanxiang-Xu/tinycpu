@@ -90,9 +90,15 @@ The v0.6-specific targets cover the new architecture:
 - `test-v06-pipeline-overlap`: multiple valid pipeline stages at once.
 - `test-v06-forwarding`: EX/MEM, MEM/WB, priority, and store-data forwarding.
 - `test-v06-load-use`: load-use stalls for ALU, store address/data, and branch
-  compare. This currently exposes a known RTL bug.
+  compare.
 - `test-v06-branch-flush`: taken branch, not-taken branch, JAL, and JALR
   flush behavior.
+
+`test-all` is the CI aggregate for the current v0.6 branch. It runs the GPIO
+smoke test, C GPIO firmware test, standalone RV32M mul/div unit test, and the
+v0.6 BRAM/loader/pipeline suite. The v0.5 directed and grid firmware targets
+remain individually runnable while their expectations are being realigned with
+the v0.6 pipeline core.
 
 ## Generated Outputs
 

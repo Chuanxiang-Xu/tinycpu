@@ -165,7 +165,6 @@ test-v05-rv32im-grid: firmware-rv32im-demo
 		SIM_BUILD=sim_build/test-v05-rv32im-grid
 
 test-all: test-v03-gpio test-v04-firmware-gpio test-v05-muldiv
-test-all: test-v05-rv32i-directed test-v05-branch-load-store
-test-all: test-v05-rv32im-grid
+test-all: test-v06-pipeline
 
 include $(shell cocotb-config --makefiles)/Makefile.sim

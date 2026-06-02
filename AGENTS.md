@@ -605,3 +605,32 @@ Next:
 
 - Commit, push, and open a draft GitHub PR for the v0.6 pipeline/BRAM/loader
   update.
+
+### 2026-06-02 - realign CI aggregate with v0.6 tests
+
+Changed:
+
+- `sim/cocotb/Makefile`: changed `test-all` to run the current branch
+  aggregate: GPIO smoke, C GPIO firmware, standalone RV32M mul/div, and
+  `test-v06-pipeline`.
+- `README.md`, `docs/simulation.md`, `docs/verification.md`, and `AGENTS.md`:
+  documented that the older v0.5 directed/grid targets remain individually
+  runnable while they are being realigned with the v0.6 pipeline core.
+
+Reason:
+
+- GitHub Actions failed because CI still used `test-all`, and that aggregate
+  still included v0.5 directed/grid regressions that are known to need v0.6
+  pipeline expectation updates.
+
+Validation:
+
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-all`
+  passed the updated aggregate: `test-v03-gpio`, `test-v04-firmware-gpio`,
+  `test-v05-muldiv`, `test-v06-bram`, `test-v06-pipeline-overlap`,
+  `test-v06-forwarding`, `test-v06-load-use`, `test-v06-branch-flush`, and
+  `test-v06-axil-loader`.
+
+Next:
+
+- Commit, push, and confirm the GitHub Actions rerun.
