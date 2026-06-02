@@ -7,8 +7,8 @@ The demo implements:
 
 ```c
 while (1) {
-    *(volatile uint32_t *)0x40000000 =
-        *(volatile uint32_t *)0x40000004;
+    *(volatile uint32_t *)0x10000000 =
+        *(volatile uint32_t *)0x10000004;
 }
 ```
 

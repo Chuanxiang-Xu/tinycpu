@@ -3,7 +3,7 @@
 
 The program is intentionally tiny:
 
-    x2 = 0x40000000
+    x2 = 0x10000000
 loop:
     x1 = *(uint32_t *)(x2 + 4)
     *(uint32_t *)(x2 + 0) = x1
@@ -48,7 +48,7 @@ def jal(rd: int, offset: int) -> int:
 
 
 PROGRAM = [
-    lui(2, 0x40000),   # x2 = GPIO base
+    lui(2, 0x10000),   # x2 = GPIO base
     lw(1, 2, 4),       # x1 = switch register
     sw(1, 2, 0),       # LED register = x1
     jal(0, -8),        # jump back to lw

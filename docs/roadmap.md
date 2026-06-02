@@ -34,14 +34,14 @@
 - RV32IM C demo for grid math such as `row * 10 + col` and `% 7`.
 - cocotb coverage for the mul/div unit and RV32IM grid math firmware.
 
-## v0.6 Pipeline Cleanup Candidate
+## v0.6 Pipeline BRAM Loader Work In Progress
 
-- Replace global bus serialization with clearer valid/bubble pipeline
-  registers.
-- Add explicit forwarding.
-- Add load-use stall handling.
-- Add branch flush handling.
-- Add stronger ISA and hazard tests.
+- Replace global bus serialization with valid/bubble pipeline registers.
+- Move the CPU core to Harvard-style simple imem/dmem ports.
+- Add unified 64 KiB BRAM, dmem MMIO decoder, and AXI-Lite loader/control
+  slave.
+- Finish forwarding, load-use, branch flush, and RV32M integration until the
+  directed and firmware regressions all pass again.
 
 ## Later
 

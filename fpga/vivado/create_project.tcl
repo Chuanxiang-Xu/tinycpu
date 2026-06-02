@@ -1,4 +1,4 @@
-set proj_name tinycpu_pynq_v0_5_rv32im_m_extension
+set proj_name tinycpu_pynq_v0_6_pipeline_bram_loader
 set proj_dir  ./build/vivado/$proj_name
 set ram_hex   programs/led_switch_demo.hex
 set ram_words 4
@@ -19,8 +19,9 @@ create_project $proj_name $proj_dir -part xc7z020clg400-1 -force
 set_property target_language Verilog [current_project]
 
 add_files [glob ./rtl/core/*.sv]
-add_files [glob ./rtl/axil/*.sv]
-add_files ./rtl/soc/tinycpu_soc.sv
+add_files [glob ./rtl/bus/*.sv]
+add_files [glob ./rtl/mem/*.sv]
+add_files [glob ./rtl/soc/*.sv]
 add_files ./rtl/board/pynqz2_top.sv
 add_files -fileset sources_1 $ram_hex_abs
 set_property file_type {Memory Initialization Files} [get_files $ram_hex_abs]

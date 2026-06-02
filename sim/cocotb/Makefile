@@ -13,11 +13,16 @@ VERILOG_SOURCES = \
 	$(ROOT_DIR)/rtl/core/tinycpu_mem_stage.sv \
 	$(ROOT_DIR)/rtl/core/tinycpu_wb_stage.sv \
 	$(ROOT_DIR)/rtl/core/tinycpu_hazard.sv \
+	$(ROOT_DIR)/rtl/core/tinycpu_forwarding.sv \
 	$(ROOT_DIR)/rtl/core/tinycpu_muldiv.sv \
 	$(ROOT_DIR)/rtl/core/tinycpu_core_rv32im_axil.sv \
-	$(ROOT_DIR)/rtl/axil/axil_ram.sv \
-	$(ROOT_DIR)/rtl/axil/axil_gpio.sv \
-	$(ROOT_DIR)/rtl/axil/axil_interconnect.sv \
+	$(ROOT_DIR)/rtl/core/tinycpu_core_pipe.sv \
+	$(ROOT_DIR)/rtl/mem/tinycpu_tdp_bram.sv \
+	$(ROOT_DIR)/rtl/bus/axil_ram.sv \
+	$(ROOT_DIR)/rtl/bus/axil_gpio.sv \
+	$(ROOT_DIR)/rtl/bus/axil_interconnect.sv \
+	$(ROOT_DIR)/rtl/bus/tinycpu_axil_loader.sv \
+	$(ROOT_DIR)/rtl/soc/tinycpu_dmem_decoder.sv \
 	$(ROOT_DIR)/rtl/soc/tinycpu_soc.sv
 
 TOPLEVEL ?= tinycpu_soc
@@ -35,6 +40,9 @@ COMPILE_ARGS += \
 .PHONY: test-v03-gpio test-v04-firmware-gpio test-v05-muldiv
 .PHONY: test-v05-rv32im-grid test-all firmware-c-demo firmware-rv32im-demo
 .PHONY: test-v05-rv32i-directed test-v05-branch-load-store
+.PHONY: test-v06-bram test-v06-axil-loader test-v06-pipeline-overlap
+.PHONY: test-v06-forwarding test-v06-load-use test-v06-branch-flush
+.PHONY: test-v06-pipeline
 
 test-v03-gpio:
 	$(MAKE) sim \
@@ -83,6 +91,68 @@ test-v05-branch-load-store: sim_build/test-v05-branch-load-store/program.hex
 		RAM_INIT_WORDS=128 \
 		SIM_BUILD=sim_build/test-v05-branch-load-store
 
+test-v06-bram:
+	$(MAKE) sim \
+		COCOTB_TEST_MODULES=test_v06_tdp_bram \
+		TOPLEVEL=tinycpu_tdp_bram \
+		SIM_BUILD=sim_build/test-v06-bram
+
+sim_build/test-v06-pipeline-overlap/program.hex: tinycpu_test_programs.py
+	python3 tinycpu_test_programs.py pipeline-overlap $@
+
+test-v06-pipeline-overlap: sim_build/test-v06-pipeline-overlap/program.hex
+	$(MAKE) sim \
+		COCOTB_TEST_MODULES=test_v06_pipeline_overlap \
+		TOPLEVEL=tinycpu_soc \
+		RAM_HEX=sim_build/test-v06-pipeline-overlap/program.hex \
+		RAM_INIT_WORDS=128 \
+		SIM_BUILD=sim_build/test-v06-pipeline-overlap
+
+sim_build/test-v06-forwarding/program.hex: tinycpu_test_programs.py
+	python3 tinycpu_test_programs.py pipeline-forwarding $@
+
+test-v06-forwarding: sim_build/test-v06-forwarding/program.hex
+	$(MAKE) sim \
+		COCOTB_TEST_MODULES=test_v06_forwarding \
+		TOPLEVEL=tinycpu_soc \
+		RAM_HEX=sim_build/test-v06-forwarding/program.hex \
+		RAM_INIT_WORDS=128 \
+		SIM_BUILD=sim_build/test-v06-forwarding
+
+sim_build/test-v06-load-use/program.hex: tinycpu_test_programs.py
+	python3 tinycpu_test_programs.py pipeline-load-use $@
+
+test-v06-load-use: sim_build/test-v06-load-use/program.hex
+	$(MAKE) sim \
+		COCOTB_TEST_MODULES=test_v06_load_use \
+		TOPLEVEL=tinycpu_soc \
+		RAM_HEX=sim_build/test-v06-load-use/program.hex \
+		RAM_INIT_WORDS=128 \
+		SIM_BUILD=sim_build/test-v06-load-use
+
+sim_build/test-v06-branch-flush/program.hex: tinycpu_test_programs.py
+	python3 tinycpu_test_programs.py pipeline-branch-flush $@
+
+test-v06-branch-flush: sim_build/test-v06-branch-flush/program.hex
+	$(MAKE) sim \
+		COCOTB_TEST_MODULES=test_v06_branch_flush \
+		TOPLEVEL=tinycpu_soc \
+		RAM_HEX=sim_build/test-v06-branch-flush/program.hex \
+		RAM_INIT_WORDS=128 \
+		SIM_BUILD=sim_build/test-v06-branch-flush
+
+test-v06-axil-loader:
+	$(MAKE) sim \
+		COCOTB_TEST_MODULES=test_v06_axil_loader \
+		TOPLEVEL=tinycpu_soc \
+		RAM_HEX=../../programs/led_switch_demo.hex \
+		RAM_INIT_WORDS=4 \
+		SIM_BUILD=sim_build/test-v06-axil-loader
+
+test-v06-pipeline: test-v06-bram test-v06-pipeline-overlap
+test-v06-pipeline: test-v06-forwarding test-v06-load-use
+test-v06-pipeline: test-v06-branch-flush test-v06-axil-loader
+
 firmware-rv32im-demo:
 	$(MAKE) -C $(ROOT_DIR)/programs/rv32im_demo
 
@@ -95,7 +165,6 @@ test-v05-rv32im-grid: firmware-rv32im-demo
 		SIM_BUILD=sim_build/test-v05-rv32im-grid
 
 test-all: test-v03-gpio test-v04-firmware-gpio test-v05-muldiv
-test-all: test-v05-rv32i-directed test-v05-branch-load-store
-test-all: test-v05-rv32im-grid
+test-all: test-v06-pipeline
 
 include $(shell cocotb-config --makefiles)/Makefile.sim

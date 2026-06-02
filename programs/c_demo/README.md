@@ -37,8 +37,8 @@ Outputs:
 - `call main` for the C entry point
 - `j label` for unconditional local loops
 
-The C demo reads the switch MMIO register at `0x40000004` and writes the LED
-MMIO register at `0x40000000`.
+The C demo reads the switch MMIO register at `0x10000004` and writes the LED
+MMIO register at `0x10000000`.
 
 References:
 

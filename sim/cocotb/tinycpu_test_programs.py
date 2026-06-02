@@ -343,7 +343,7 @@ def expect_ne(p: Program, rs1: int, rs2: int) -> None:
 
 def rv32i_directed() -> list[int]:
     p = Program()
-    li(p, GPIO, 0x4000_0000)
+    li(p, GPIO, 0x1000_0000)
 
     li(p, 1, 0x1234_5678)
     li(p, 2, 0x1234_5678)
@@ -438,7 +438,7 @@ def rv32i_directed() -> list[int]:
 
 def branch_load_store() -> list[int]:
     p = Program()
-    li(p, GPIO, 0x4000_0000)
+    li(p, GPIO, 0x1000_0000)
 
     p.emit(addi(1, ZERO, 5))
     p.emit(addi(2, ZERO, 5))
@@ -501,6 +501,152 @@ PROGRAMS = {
     "rv32i-directed": rv32i_directed,
     "branch-load-store": branch_load_store,
 }
+
+
+def pipeline_overlap() -> list[int]:
+    p = Program()
+    li(p, GPIO, 0x1000_0000)
+
+    p.emit(addi(1, ZERO, 1))
+    p.emit(addi(2, ZERO, 2))
+    p.emit(addi(3, ZERO, 3))
+    p.emit(addi(4, ZERO, 4))
+    p.emit(addi(5, ZERO, 5))
+    p.emit(addi(6, ZERO, 6))
+    p.emit(addi(7, ZERO, 7))
+    p.emit(addi(8, ZERO, 8))
+
+    pass_loop(p, 0xC)
+    fail(p)
+    return p.words()
+
+
+def pipeline_forwarding() -> list[int]:
+    p = Program()
+    li(p, GPIO, 0x1000_0000)
+
+    p.emit(addi(1, ZERO, 10))
+    p.emit(addi(2, ZERO, 3))
+
+    # EX/MEM -> EX forwarding.
+    p.emit(add(3, 1, 2))
+    p.emit(add(4, 3, 2))
+    p.emit(addi(5, ZERO, 16))
+    expect_eq(p, 4, 5)
+
+    # MEM/WB -> EX forwarding with one independent instruction between.
+    p.emit(add(6, 1, 2))
+    p.emit(addi(7, ZERO, 1))
+    p.emit(add(8, 6, 7))
+    p.emit(addi(9, ZERO, 14))
+    expect_eq(p, 8, 9)
+
+    # EX/MEM priority over MEM/WB when two older instructions write same rd.
+    p.emit(addi(10, ZERO, 1))
+    p.emit(addi(10, 10, 2))
+    p.emit(add(11, 10, 2))
+    p.emit(addi(12, ZERO, 6))
+    expect_eq(p, 11, 12)
+
+    # Store data forwarding.
+    li(p, 20, 0x100)
+    p.emit(addi(13, ZERO, 0x5A))
+    p.emit(sw(13, 20, 0))
+    p.emit(lw(14, 20, 0))
+    expect_eq(p, 14, 13)
+
+    pass_loop(p, 0xD)
+    fail(p)
+    return p.words()
+
+
+def pipeline_load_use() -> list[int]:
+    p = Program()
+    li(p, GPIO, 0x1000_0000)
+    li(p, 20, 0x100)
+
+    p.emit(addi(1, ZERO, 7))
+    p.emit(sw(1, 20, 0))
+
+    # Load followed immediately by ALU use.
+    p.emit(lw(2, 20, 0))
+    p.emit(addi(3, 2, 5))
+    p.emit(addi(4, ZERO, 12))
+    expect_eq(p, 3, 4)
+
+    # Load followed by store address use.
+    p.emit(addi(5, ZERO, 0x20))
+    p.emit(sw(5, 20, 4))
+    p.emit(lw(6, 20, 4))
+    p.emit(sw(1, 6, 0))
+    p.emit(lw(7, 5, 0))
+    expect_eq(p, 7, 1)
+
+    # Load followed by store data use.
+    p.emit(lw(8, 20, 0))
+    p.emit(sw(8, 20, 8))
+    p.emit(lw(9, 20, 8))
+    expect_eq(p, 9, 1)
+
+    # Load followed by branch compare.
+    p.emit(lw(10, 20, 0))
+    beq(10, 1, "load_branch_ok", p)
+    p.jump("fail")
+    p.label("load_branch_ok")
+
+    pass_loop(p, 0xE)
+    fail(p)
+    return p.words()
+
+
+def pipeline_branch_flush() -> list[int]:
+    p = Program()
+    li(p, GPIO, 0x1000_0000)
+
+    p.emit(addi(1, ZERO, 1))
+    p.emit(addi(2, ZERO, 1))
+
+    # Taken branch must skip the wrong-path LED failure store.
+    beq(1, 2, "taken_ok", p)
+    li(p, LED_VALUE, 1)
+    p.emit(sw(LED_VALUE, GPIO, 0))
+    p.label("taken_ok")
+
+    # Not-taken branch must continue normally.
+    bne(1, 2, "fail", p)
+
+    # JAL must skip a wrong-path store.
+    p.jump("jal_ok")
+    li(p, LED_VALUE, 1)
+    p.emit(sw(LED_VALUE, GPIO, 0))
+    p.label("jal_ok")
+
+    # JALR must skip a wrong-path store.
+    li(p, 14, 0)
+    p.emit(jalr(ZERO, 14, 0))
+    p.jump("fail")
+    p.label("jalr_ok")
+
+    pass_loop(p, 0xF)
+    fail(p)
+
+    words = p.words()
+    target = p.labels["jalr_ok"]
+    for idx, word in enumerate(words):
+        if word == addi(14, ZERO, 0):
+            words[idx] = addi(14, ZERO, target)
+            break
+    else:
+        raise AssertionError("could not patch JALR target")
+    return words
+
+
+PROGRAMS.update({
+    "pipeline-overlap": pipeline_overlap,
+    "pipeline-forwarding": pipeline_forwarding,
+    "pipeline-load-use": pipeline_load_use,
+    "pipeline-branch-flush": pipeline_branch_flush,
+})
 
 
 def write_hex(words: list[int], out_path: Path, min_words: int = 128) -> None:
