@@ -12,6 +12,15 @@ EXPECTED_LED_BY_SW = {
 
 
 async def reset_soc(dut):
+    dut.s_axi_awaddr.value = 0
+    dut.s_axi_awvalid.value = 0
+    dut.s_axi_wdata.value = 0
+    dut.s_axi_wstrb.value = 0
+    dut.s_axi_wvalid.value = 0
+    dut.s_axi_bready.value = 1
+    dut.s_axi_araddr.value = 0
+    dut.s_axi_arvalid.value = 0
+    dut.s_axi_rready.value = 1
     dut.rst.value = 1
     dut.sw.value = 0
     await RisingEdge(dut.clk)

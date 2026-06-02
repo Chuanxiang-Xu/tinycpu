@@ -1,7 +1,7 @@
 # Simulation
 
-`v0.5-rv32im-m-extension` uses cocotb and Icarus Verilog for lightweight RTL
-simulation.
+`v0.6-pipeline-bram-loader` work in progress uses cocotb and Icarus Verilog
+for lightweight RTL simulation.
 
 ## Setup
 
@@ -32,13 +32,20 @@ make -C sim/cocotb test-v05-muldiv
 make -C sim/cocotb test-v05-rv32i-directed
 make -C sim/cocotb test-v05-branch-load-store
 make -C sim/cocotb test-v05-rv32im-grid
+make -C sim/cocotb test-v06-bram
+make -C sim/cocotb test-v06-axil-loader
+make -C sim/cocotb test-v06-pipeline-overlap
+make -C sim/cocotb test-v06-forwarding
+make -C sim/cocotb test-v06-load-use
+make -C sim/cocotb test-v06-branch-flush
+make -C sim/cocotb test-v06-pipeline
 make -C sim/cocotb test-all
 ```
 
 The default and `test-v03-gpio` targets check the full path:
 
 ```text
-program in RAM -> tinycpu_core_rv32im_axil -> AXI-Lite GPIO -> LED
+program in unified BRAM -> tinycpu_core_pipe -> dmem MMIO -> LED
 ```
 
 `test-v04-firmware-gpio` builds and runs the basic RV32I C GPIO firmware:
@@ -74,6 +81,18 @@ make -C sim/cocotb test-v05-branch-load-store
 make -C programs/rv32im_demo
 make -C sim/cocotb test-v05-rv32im-grid
 ```
+
+The v0.6-specific targets cover the new architecture:
+
+- `test-v06-bram`: byte writes, dual-port reads, and same-cycle port access.
+- `test-v06-axil-loader`: AXI-Lite firmware load, boot control, and blocked
+  live RAM writes.
+- `test-v06-pipeline-overlap`: multiple valid pipeline stages at once.
+- `test-v06-forwarding`: EX/MEM, MEM/WB, priority, and store-data forwarding.
+- `test-v06-load-use`: load-use stalls for ALU, store address/data, and branch
+  compare. This currently exposes a known RTL bug.
+- `test-v06-branch-flush`: taken branch, not-taken branch, JAL, and JALR
+  flush behavior.
 
 ## Generated Outputs
 

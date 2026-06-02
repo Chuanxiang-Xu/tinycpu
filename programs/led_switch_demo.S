@@ -2,7 +2,7 @@
     .globl _start
 
 _start:
-    lui   x2, 0x40000        # x2 = 0x4000_0000 GPIO base
+    lui   x2, 0x10000        # x2 = 0x1000_0000 GPIO base
 
 loop:
     lw    x1, 4(x2)          # x1 = switch register

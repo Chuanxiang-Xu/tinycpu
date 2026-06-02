@@ -10,7 +10,7 @@ launch_runs impl_1 -to_step write_bitstream -jobs 8
 wait_on_run impl_1
 
 puts "============================================================"
-puts "tinycpu v0.5-rv32im-m-extension bitstream generated"
+puts "tinycpu v0.6-pipeline-bram-loader bitstream generated"
 puts "Project: ${proj_name}"
 puts "Bitstream: ${bitstream_path}"
 puts "============================================================"

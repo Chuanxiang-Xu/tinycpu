@@ -8,11 +8,12 @@
 tinycpu is a source-first, clean-room educational RV32IM SoC for the PYNQ-Z2
 FPGA board, with AXI-Lite MMIO, cocotb simulation, and a Vivado Tcl flow.
 
-Current milestone: `v0.5-rv32im-m-extension`.
+Current milestone: `v0.6-pipeline-bram-loader` work in progress.
 
-Important status note: the CPU is stage-structured around IF, ID, EX, MEM, and
-WB, but it is not a fully overlapped five-stage pipeline yet. The current core
-serializes instruction fetch and load/store traffic through one AXI-Lite master.
+Important status note: the repository now contains a first-cut overlapped
+pipeline core with Harvard-style simple memory ports and a unified BRAM/loader
+SoC wrapper. The GPIO smoke path passes locally, but the broader directed
+RV32I hazard/control regressions are not all passing yet.
 
 This repository does not depend on private course solution code, local homework
 directories, generated Vivado projects, or non-public RTL.
@@ -20,9 +21,9 @@ directories, generated Vivado projects, or non-public RTL.
 ## Current Status
 
 - RV32IM-target educational core.
-- RV32I implemented with RV32M multiply/divide implemented in v0.5.
-- Stage-structured serialized control path, not a fully overlapped pipeline.
-- PYNQ-Z2 LED/switch MMIO demo through AXI-Lite GPIO.
+- RV32I implemented with RV32M multiply/divide support carried forward.
+- First-cut overlapped pipeline with remaining directed-regression failures.
+- PYNQ-Z2 LED/switch MMIO demo through the dmem-side MMIO decoder.
 - Vivado Hardware Manager bitstream programming flow.
 - PYNQ Overlay/Jupyter flow is planned later.
 
@@ -62,7 +63,8 @@ vivado -mode batch -source fpga/vivado/build_bitstream.tcl
 
 ```text
 rtl/core/       RV32IM-target core, stage helpers, regfile, ALU, mul/div
-rtl/axil/       AXI-Lite RAM, GPIO, and interconnect
+rtl/bus/        AXI-Lite bus/control modules, including the loader
+rtl/mem/        Unified BRAM and memory-oriented building blocks
 rtl/soc/        SoC integration
 rtl/board/      PYNQ-Z2 board tops, including pin smoke test
 programs/       Hand-written demo, RV32I C demo, RV32IM C demo
@@ -77,17 +79,15 @@ docs/           Architecture, ISA, simulation, verification, bring-up notes
 PYNQ-Z2 pins
   -> pynqz2_top
       -> tinycpu_soc
-          -> tinycpu_core_rv32im_axil
-          -> axil_interconnect
-              -> axil_ram
-              -> axil_gpio
+          -> tinycpu_core_pipe
+          -> unified 64 KiB BRAM
+          -> dmem MMIO decoder
+          -> AXI-Lite loader/control slave
 ```
 
 RAM is initialized from a hex file. The CPU reset PC is `0x0000_0000`.
-
-The design uses one AXI-Lite master for both instruction fetch and data
-load/store operations, so the v0.5 core waits around bus transactions instead
-of overlapping all five stages.
+The core uses simple instruction and data memory ports; AXI-Lite is now at the
+SoC loader/control boundary instead of inside the CPU pipeline.
 
 ## What You Should See
 
@@ -152,6 +152,13 @@ make -C sim/cocotb test-v05-muldiv
 make -C sim/cocotb test-v05-rv32i-directed
 make -C sim/cocotb test-v05-branch-load-store
 make -C sim/cocotb test-v05-rv32im-grid
+make -C sim/cocotb test-v06-bram
+make -C sim/cocotb test-v06-axil-loader
+make -C sim/cocotb test-v06-pipeline-overlap
+make -C sim/cocotb test-v06-forwarding
+make -C sim/cocotb test-v06-load-use
+make -C sim/cocotb test-v06-branch-flush
+make -C sim/cocotb test-v06-pipeline
 make -C sim/cocotb test-all
 ```
 
@@ -159,6 +166,9 @@ make -C sim/cocotb test-all
 `test-v05-rv32im-grid` builds `programs/rv32im_demo/firmware.hex` first.
 Both firmware-backed tests require a RISC-V GNU toolchain.
 The directed RV32I tests generate temporary RAM hex files under `sim_build/`.
+The v0.6 pipeline tests also generate temporary RAM hex files under
+`sim_build/`; `test-v06-pipeline` runs the BRAM, loader, overlap, forwarding,
+load-use, and branch-flush coverage together.
 
 Expected cocotb result:
 
@@ -311,11 +321,11 @@ build/vivado/tinycpu_pynq_v0_5_rv32im_m_extension/tinycpu_pynq_v0_5_rv32im_m_ext
 | Address range | Device |
 | --- | --- |
 | `0x0000_0000 - 0x0000_FFFF` | AXI-Lite RAM |
-| `0x4000_0000` | GPIO LED output register |
-| `0x4000_0004` | GPIO switch input register |
-| `0x4000_0010` | Future game input register |
-| `0x4000_0014` | Future game status register |
-| `0x4000_0100 - 0x4000_01FF` | Future game grid/framebuffer window |
+| `0x1000_0000` | GPIO LED output register |
+| `0x1000_0004` | GPIO switch input register |
+| `0x1000_0010` | Future game input register |
+| `0x1000_0014` | Future game status register |
+| `0x1000_0100 - 0x1000_01FF` | Future game grid/framebuffer window |
 
 ## Documentation
 

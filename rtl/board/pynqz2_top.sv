@@ -1,7 +1,7 @@
-// PYNQ-Z2 board top for tinycpu-pynq v0.5-rv32im-m-extension.
+// PYNQ-Z2 board top for tinycpu-pynq v0.6-pipeline-bram-loader.
 //
 // This module only adapts board pins to the SoC. CPU, memory, interconnect,
-// and GPIO internals live under rtl/core, rtl/axil, and rtl/soc.
+// and GPIO internals live under rtl/core, rtl/bus, rtl/mem, and rtl/soc.
 module pynqz2_top #(
     parameter RAM_HEX = "programs/led_switch_demo.hex",
     parameter integer RAM_INIT_WORDS = 4
@@ -19,10 +19,27 @@ module pynqz2_top #(
         .RAM_HEX(RAM_HEX),
         .RAM_INIT_WORDS(RAM_INIT_WORDS)
     ) soc_i (
-        .clk(sysclk),
-        .rst(btn[0]),
-        .sw (sw),
-        .led(soc_led)
+        .clk          (sysclk),
+        .rst          (btn[0]),
+        .sw           (sw),
+        .led          (soc_led),
+        .s_axi_awaddr (32'h0000_0000),
+        .s_axi_awvalid(1'b0),
+        .s_axi_awready(),
+        .s_axi_wdata  (32'h0000_0000),
+        .s_axi_wstrb  (4'b0000),
+        .s_axi_wvalid (1'b0),
+        .s_axi_wready (),
+        .s_axi_bresp  (),
+        .s_axi_bvalid (),
+        .s_axi_bready (1'b1),
+        .s_axi_araddr (32'h0000_0000),
+        .s_axi_arvalid(1'b0),
+        .s_axi_arready(),
+        .s_axi_rdata  (),
+        .s_axi_rresp  (),
+        .s_axi_rvalid (),
+        .s_axi_rready (1'b1)
     );
 
     always_ff @(posedge sysclk) begin

@@ -1,7 +1,7 @@
 # Verification
 
 This page tracks the current verification coverage for
-`v0.5-rv32im-m-extension`.
+`v0.6-pipeline-bram-loader` work in progress.
 
 ## Existing Tests
 
@@ -14,6 +14,24 @@ This page tracks the current verification coverage for
   `make -C sim/cocotb test-v05-branch-load-store`.
 - RV32IM grid math firmware test:
   `make -C sim/cocotb test-v05-rv32im-grid`.
+
+Current local v0.6 status:
+
+- `make -C sim/cocotb test-v03-gpio` passes with the pipelined core and
+  unified BRAM/MMIO SoC.
+- `make -C sim/cocotb test-v06-bram` passes.
+- `make -C sim/cocotb test-v06-axil-loader` passes.
+- `make -C sim/cocotb test-v06-pipeline-overlap` passes.
+- `make -C sim/cocotb test-v06-forwarding` passes.
+- `make -C sim/cocotb test-v06-branch-flush` passes.
+- `make -C sim/cocotb test-v06-load-use` passes after the conservative
+  load-use stall fix.
+- `make -C sim/cocotb test-v06-pipeline` passes the v0.6 BRAM, loader,
+  overlap, forwarding, load-use, and branch-flush suite.
+- `make -C sim/cocotb test-v05-rv32i-directed` currently fails in the
+  JAL/JALR/control-flow tail.
+- `make -C sim/cocotb test-v05-branch-load-store` currently fails early in the
+  branch/load-store directed program.
 
 ## Missing Tests
 
@@ -30,9 +48,7 @@ This page tracks the current verification coverage for
 
 ## Recommended Roadmap
 
-- v0.6 pipeline cleanup.
-- Valid/bubble pipeline registers.
-- Forwarding.
-- Load-use stall.
-- Branch flush.
+- Finish v0.6 control-hazard and store/load forwarding fixes.
+- Add explicit pipeline overlap, forwarding, load-use, branch-flush, BRAM, and
+  AXI-Lite loader cocotb tests.
 - Stronger ISA tests.

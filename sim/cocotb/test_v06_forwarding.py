@@ -21,31 +21,23 @@ async def reset_soc(dut):
     await RisingEdge(dut.clk)
 
 
-async def wait_led(dut, expected, cycles=1000):
-    for i in range(cycles):
-        await RisingEdge(dut.clk)
-        await Timer(1, unit="ns")
-        if int(dut.led.value) == expected:
-            return
-    raise AssertionError(f"LED expected {expected:04b}, got {int(dut.led.value):04b}")
-
-
 @cocotb.test()
-async def test_cpu_reads_switch_and_writes_led_mmio(dut):
-    """CPU fetches from RAM, reads GPIO switch MMIO, and writes GPIO LED MMIO."""
+async def test_forwarding_program(dut):
+    """Check EX/MEM, MEM/WB, priority, and store-data forwarding."""
 
     dut.clk.value = 0
     clock = Clock(dut.clk, 10, unit="ns")
     cocotb.start_soon(clock.start())
 
     await reset_soc(dut)
-    await wait_led(dut, 0)
 
-    dut.sw.value = 0b01
-    await wait_led(dut, 0b0001)
+    for _ in range(8000):
+        await RisingEdge(dut.clk)
+        await Timer(1, unit="ns")
+        led = int(dut.led.value)
+        if led == 0x1:
+            raise AssertionError("forwarding program reported failure")
+        if led == 0xD:
+            return
 
-    dut.sw.value = 0b10
-    await wait_led(dut, 0b0010)
-
-    dut.sw.value = 0b11
-    await wait_led(dut, 0b0011)
+    raise AssertionError(f"LED expected 1101, got {int(dut.led.value):04b}")
