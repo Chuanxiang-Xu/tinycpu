@@ -6,14 +6,17 @@
 ![FPGA: PYNQ-Z2](https://img.shields.io/badge/FPGA-PYNQ--Z2-green.svg)
 
 tinycpu is a source-first, clean-room educational RV32IM SoC for the PYNQ-Z2
-FPGA board, with AXI-Lite MMIO, cocotb simulation, and a Vivado Tcl flow.
+FPGA board, with dmem-side MMIO, an AXI-Lite loader/control block, cocotb
+simulation, and a Vivado Tcl flow.
 
-Current milestone: `v0.6-pipeline-bram-loader` work in progress.
+Current milestone: `v0.6-pipeline-bram-loader`.
 
-Important status note: the repository now contains a first-cut overlapped
+Important status note: the repository contains an overlapped educational
 pipeline core with Harvard-style simple memory ports and a unified BRAM/loader
-SoC wrapper. The GPIO smoke path passes locally, but the broader directed
-RV32I hazard/control regressions are not all passing yet.
+SoC wrapper. The current CI aggregate covers GPIO smoke, C GPIO firmware, the
+standalone RV32M unit, v0.6 BRAM/loader/pipeline tests, and a RISC-V ISA smoke
+target. The older v0.5 directed/grid targets are still kept as individual
+regressions while their expectations are realigned with the v0.6 pipeline.
 
 This repository does not depend on private course solution code, local homework
 directories, generated Vivado projects, or non-public RTL.
@@ -22,10 +25,29 @@ directories, generated Vivado projects, or non-public RTL.
 
 - RV32IM-target educational core.
 - RV32I implemented with RV32M multiply/divide support carried forward.
-- First-cut overlapped pipeline with remaining directed-regression failures.
+- Overlapped IF/ID, ID/EX, EX/MEM, and MEM/WB pipeline registers.
+- Unified 64 KiB BRAM behind simple instruction/data memory ports.
+- AXI-Lite loader/control slave at the SoC boundary.
 - PYNQ-Z2 LED/switch MMIO demo through the dmem-side MMIO decoder.
 - Vivado Hardware Manager bitstream programming flow.
 - PYNQ Overlay/Jupyter flow is planned later.
+
+## Teaching Path
+
+This project is meant to be read as a small SoC, not only as isolated RTL
+files:
+
+1. Start with `rtl/soc/tinycpu_soc.sv` to see how the CPU, BRAM, MMIO decoder,
+   and AXI-Lite loader fit together.
+2. Read `rtl/core/tinycpu_core_pipe.sv` next. It is the main pipeline control
+   path, with stage registers, hazards, forwarding, branch flushes, and RV32M
+   stalls in one place.
+3. Use `docs/memory_map.md` while reading firmware or tests so CPU-side MMIO
+   and loader-side AXI-Lite addresses do not get mixed up.
+4. Run the focused cocotb targets in `docs/simulation.md`; each one is a small
+   lesson about one hardware feature.
+5. Treat `tests/riscv/` as selected clean-room ISA coverage, not as a full
+   imported RISC-V compliance suite.
 
 ## Quick Start
 
@@ -159,6 +181,11 @@ make -C sim/cocotb test-v06-forwarding
 make -C sim/cocotb test-v06-load-use
 make -C sim/cocotb test-v06-branch-flush
 make -C sim/cocotb test-v06-pipeline
+make -C sim/cocotb build-riscv-tests
+make -C sim/cocotb test-riscv-smoke
+make -C sim/cocotb test-rv32ui
+make -C sim/cocotb test-rv32um
+make -C sim/cocotb test-riscv-isa
 make -C sim/cocotb test-all
 ```
 
@@ -169,12 +196,27 @@ The directed RV32I tests generate temporary RAM hex files under `sim_build/`.
 The v0.6 pipeline tests also generate temporary RAM hex files under
 `sim_build/`; `test-v06-pipeline` runs the BRAM, loader, overlap, forwarding,
 load-use, and branch-flush coverage together.
+The RISC-V ISA simulation tests build tinycpu-owned assembly programs into
+ELF, HEX, BIN, and DUMP files under `build/riscv-tests/`, preload the unified
+BRAM, and watch a test-only MMIO pass/fail write:
+
+```sh
+make -C sim/cocotb test-riscv-smoke
+make -C sim/cocotb test-rv32ui
+make -C sim/cocotb test-rv32um
+make -C sim/cocotb test-riscv-isa
+```
+
+These targets pass a selected rv32ui-style and rv32um-style subset in
+simulation, including byte/halfword loads and an M-result pipeline stress
+case. They are not a full RISC-V compliance claim.
 The `test-all` target is the CI aggregate for the current v0.6 branch: GPIO
-smoke, C GPIO firmware, standalone RV32M mul/div, and the v0.6 pipeline suite.
+smoke, C GPIO firmware, standalone RV32M mul/div, the v0.6 pipeline suite, and
+the RISC-V ISA smoke target.
 The older v0.5 directed/grid tests remain available as individual regression
 targets while they are being realigned with the v0.6 pipeline core.
 
-Expected cocotb result:
+Expected result for each single-test cocotb target:
 
 ```text
 TESTS=1 PASS=1 FAIL=0
@@ -272,13 +314,13 @@ vivado -mode batch -source fpga/vivado/build_bitstream.tcl
 Project name:
 
 ```text
-tinycpu_pynq_v0_5_rv32im_m_extension
+tinycpu_pynq_v0_6_pipeline_bram_loader
 ```
 
 Bitstream:
 
 ```text
-build/vivado/tinycpu_pynq_v0_5_rv32im_m_extension/tinycpu_pynq_v0_5_rv32im_m_extension.runs/impl_1/pynqz2_top.bit
+build/vivado/tinycpu_pynq_v0_6_pipeline_bram_loader/tinycpu_pynq_v0_6_pipeline_bram_loader.runs/impl_1/pynqz2_top.bit
 ```
 
 Build with the GCC-generated C firmware instead:
@@ -317,19 +359,31 @@ Then:
 Use this bitstream for the full CPU demo:
 
 ```text
-build/vivado/tinycpu_pynq_v0_5_rv32im_m_extension/tinycpu_pynq_v0_5_rv32im_m_extension.runs/impl_1/pynqz2_top.bit
+build/vivado/tinycpu_pynq_v0_6_pipeline_bram_loader/tinycpu_pynq_v0_6_pipeline_bram_loader.runs/impl_1/pynqz2_top.bit
 ```
 
 ## Memory Map
 
+CPU-side map:
+
 | Address range | Device |
 | --- | --- |
-| `0x0000_0000 - 0x0000_FFFF` | AXI-Lite RAM |
-| `0x1000_0000` | GPIO LED output register |
-| `0x1000_0004` | GPIO switch input register |
+| `0x0000_0000 - 0x0000_FFFF` | Unified BRAM program/data RAM |
+| `0x1000_0000` | dmem MMIO LED output register |
+| `0x1000_0004` | dmem MMIO switch input register |
 | `0x1000_0010` | Future game input register |
 | `0x1000_0014` | Future game status register |
 | `0x1000_0100 - 0x1000_01FF` | Future game grid/framebuffer window |
+
+Loader-side AXI-Lite map:
+
+| Loader offset | Device |
+| --- | --- |
+| `0x00000 - 0x0FFFF` | BRAM loader window |
+| `0x10000` | CONTROL register |
+| `0x10004` | STATUS register |
+| `0x10008` | BOOT_PC register |
+| `0x1000C` | Reserved/debug register |
 
 ## Documentation
 

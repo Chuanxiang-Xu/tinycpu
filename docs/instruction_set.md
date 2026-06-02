@@ -2,20 +2,25 @@
 
 The target ISA is standard RISC-V `RV32IM`.
 
-`v0.5-rv32im-m-extension` implements RV32I plus the standard RV32M
-multiply/divide instructions for simple freestanding programs compiled with a
-RISC-V GNU toolchain.
+The earlier `v0.5-rv32im-m-extension` milestone added RV32M
+multiply/divide support. The current `v0.6-pipeline-bram-loader` milestone
+carries that RV32IM target into the pipelined core and verifies a selected
+clean-room ISA subset in cocotb.
 
 ## Implemented Status
 
 - RV32I is implemented.
-- RV32M multiply/divide is implemented in v0.5.
+- RV32M multiply/divide is implemented.
+- The v0.6 simulation flow passes a selected rv32ui-style and rv32um-style
+  clean-room test subset, including byte/halfword loads and M-result pipeline
+  dependency stress coverage. This is not a full RISC-V compliance claim.
 - 32-bit fixed-length instructions are supported.
 - The compressed `C` extension is not supported.
 - Privileged instructions, CSRs, interrupts, exceptions, atomics, and floating
   point are not supported.
 - Unsupported instructions halt/trap instead of executing custom behavior.
 - AXI-Lite response codes are not yet surfaced as architectural traps.
+- Misaligned access traps are not implemented.
 
 ## Formats
 
@@ -42,7 +47,7 @@ RISC-V GNU toolchain.
 | OP-IMM | `0010011` |
 | OP | `0110011` |
 
-## v0.5 Coverage
+## Current Instruction Coverage
 
 | Instruction | Status |
 | --- | --- |

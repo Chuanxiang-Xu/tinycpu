@@ -1,7 +1,8 @@
 # Bare-Metal C
 
-tinycpu v0.5 supports simple freestanding C programs for the implemented
-RV32I/RV32M instruction set.
+tinycpu supports simple freestanding C programs for the implemented RV32I/RV32M
+instruction set. The current v0.6 SoC runs those programs from unified BRAM and
+reaches board IO through dmem-side MMIO.
 
 ## Toolchain
 
@@ -27,7 +28,7 @@ Required freestanding/link flags:
 -ffreestanding -nostdlib -nostartfiles
 ```
 
-Do not use these in v0.5 firmware:
+Do not use these in tinycpu firmware:
 
 - Compressed instructions.
 - libc.

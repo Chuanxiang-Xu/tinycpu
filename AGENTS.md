@@ -634,3 +634,226 @@ Validation:
 Next:
 
 - Commit, push, and confirm the GitHub Actions rerun.
+
+### 2026-06-02 - add clean-room RISC-V ISA simulation tests
+
+Changed:
+
+- `tests/riscv/env/linker.ld`, `tests/riscv/env/crt0.S`, and
+  `tests/riscv/env/tinycpu_test_macros.S`: added a freestanding RV32IM
+  simulation environment with `_start`, a 64 KiB BRAM memory layout, and
+  `MMIO_TEST_STATUS`/`MMIO_TEST_CODE` pass/fail macros.
+- `tests/riscv/rv32ui/*.S`: added tinycpu-owned rv32ui-style tests for smoke,
+  ALU, shifts, comparisons, PC control, branches, and load/store coverage.
+- `tests/riscv/rv32um/*.S`: added tinycpu-owned rv32um-style tests for multiply,
+  divide, remainder, edge cases, and a pending combined M pipeline stress
+  source.
+- `sim/cocotb/build_riscv_tests.py`: added toolchain detection and ELF, BIN,
+  HEX, and DUMP generation under `build/riscv-tests/`.
+- `sim/cocotb/riscv_test_runner.py` and `sim/cocotb/test_riscv_isa.py`: added
+  a generic BRAM-preload cocotb runner that resets the SoC, watches dmem MMIO
+  pass/fail writes at `0x8000_0000`, records fail codes, and checks selected
+  store address/data/strobe behavior.
+- `sim/cocotb/Makefile`: added `build-riscv-tests`, `test-riscv-smoke`,
+  `test-rv32ui`, `test-rv32um`, and `test-riscv-isa`; included only the
+  stable RISC-V smoke target in `test-all`.
+- `rtl/core/tinycpu_core_pipe.sv`: added a conservative decode-stage hold for
+  immediate consumers of an ID/EX M-extension operation.
+- `README.md`, `docs/simulation.md`, `docs/instruction_set.md`,
+  `docs/verification.md`, `rtl/core/README.md`, and `AGENTS.md`: documented the
+  ISA simulation flow, selected pass status, and unsupported/pending coverage.
+
+Reason:
+
+- Provide a reusable clean-room RISC-V ISA simulation harness before board or
+  Jupyter-loader work, while avoiding vendoring the external `riscv-tests`
+  repository or claiming full compliance.
+
+Validation:
+
+- `python3 sim/cocotb/build_riscv_tests.py` passed and generated ELF, BIN,
+  HEX, and DUMP artifacts under ignored `build/riscv-tests/`.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-riscv-smoke`
+  passed the `smoke_add` pass case and the expected-fail `fail_status` case.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-rv32ui`
+  passed the selected rv32ui-style subset: `smoke_add`, ALU, shift,
+  comparison, PC-control, branch, `lw`, and store-channel `sw`/`sb`/`sh`
+  tests.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-rv32um`
+  passed the selected rv32um-style subset: `mul`, `mulh`, `mulhsu`, `mulhu`,
+  `div`, `divu`, `rem`, and `remu`.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-all`
+  passed the CI aggregate with GPIO smoke, C GPIO firmware, standalone RV32M
+  mul/div, the v0.6 BRAM/pipeline/loader suite, and the RISC-V ISA smoke
+  target.
+
+Next:
+
+- Completed in the follow-up Phase 1-3 ISA aggregate coverage log below.
+
+### 2026-06-02 - complete Phase 1-3 ISA aggregate coverage
+
+Changed:
+
+- `rtl/core/tinycpu_regfile.sv`: added same-cycle writeback bypass on both
+  read ports so ID-stage reads observe WB-stage results without an extra
+  conservative stall.
+- `tests/riscv/env/tinycpu_test_macros.S`: replaced numeric local labels inside
+  pass/fail/check macros with unique macro-local labels.
+- `tests/riscv/rv32ui/lb.S`, `lbu.S`, `lh.S`, and `lhu.S`: moved load targets
+  away from `ra`/`sp` into ordinary test registers.
+- `tests/riscv/rv32um/m_pipeline.S`: avoided pass/fail macro temporary
+  registers for M-result values and replaced a numeric branch label with a
+  named label.
+- `sim/cocotb/riscv_test_runner.py` and `test_riscv_isa.py`: added best-effort
+  register snapshots to RISC-V ISA failure messages.
+- `sim/cocotb/Makefile`: added `lb`, `lbu`, `lh`, `lhu`, and `m_pipeline` to
+  the selected rv32ui/rv32um aggregate targets.
+- `README.md`, `docs/simulation.md`, `docs/instruction_set.md`,
+  `docs/verification.md`, `rtl/core/README.md`, and `AGENTS.md`: updated the
+  selected ISA test status from partial to passing while keeping the explicit
+  non-compliance-claim wording.
+
+Reason:
+
+- Finish the strict Phase 1-3 RISC-V ISA simulation acceptance criteria by
+  bringing byte/halfword load tests and the combined M pipeline dependency
+  stress test into the normal simulation aggregates.
+
+Validation:
+
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb build-riscv-tests`
+  passed.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb sim COCOTB_TEST_MODULES=test_riscv_isa TOPLEVEL=tinycpu_soc RAM_HEX=../../build/riscv-tests/rv32ui/lb/lb.hex RAM_INIT_WORDS=256 RISCV_TEST_NAME=rv32ui/lb RISCV_TEST_TIMEOUT=20000 SIM_BUILD=sim_build/test-rv32ui-lb-fixed`
+  passed.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb sim COCOTB_TEST_MODULES=test_riscv_isa TOPLEVEL=tinycpu_soc RAM_HEX=../../build/riscv-tests/rv32ui/lbu/lbu.hex RAM_INIT_WORDS=256 RISCV_TEST_NAME=rv32ui/lbu RISCV_TEST_TIMEOUT=20000 SIM_BUILD=sim_build/test-rv32ui-lbu-fixed`
+  passed.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb sim COCOTB_TEST_MODULES=test_riscv_isa TOPLEVEL=tinycpu_soc RAM_HEX=../../build/riscv-tests/rv32um/m_pipeline/m_pipeline.hex RAM_INIT_WORDS=256 RISCV_TEST_NAME=rv32um/m_pipeline RISCV_TEST_TIMEOUT=20000 SIM_BUILD=sim_build/test-rv32um-m_pipeline-fixed2`
+  passed.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-rv32ui`
+  passed with the expanded selected RV32I aggregate, including `lb`, `lbu`,
+  `lh`, and `lhu`.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-rv32um`
+  passed with the expanded selected RV32M aggregate, including `m_pipeline`.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-riscv-isa`
+  passed the expanded selected rv32ui-style and rv32um-style aggregate.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-v06-pipeline`
+  passed after the register-file writeback bypass.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-all`
+  passed the current CI aggregate after the ISA aggregate updates.
+
+Next:
+
+- Keep the current simulation wording as selected rv32ui-style/rv32um-style
+  coverage, not a full RISC-V compliance claim.
+
+### 2026-06-02 - strengthen RV32M tests with riscv-tests reference points
+
+Changed:
+
+- `tests/riscv/rv32um/mul.S`: added source/destination aliasing,
+  zero-destination, and additional signed low-product cases.
+- `tests/riscv/rv32um/mulh.S`, `mulhsu.S`, and `mulhu.S`: added high-product
+  boundary cases, source/destination aliasing, and zero-destination checks
+  inspired by the upstream `riscv-tests` rv32um coverage categories.
+- `tests/riscv/rv32um/div.S`, `divu.S`, `rem.S`, and `remu.S`: added more
+  signed/unsigned sign combinations, divide-by-zero, unsigned large-value, and
+  remainder edge cases.
+- `docs/verification.md` and `AGENTS.md`: documented the stronger selected
+  RV32M coverage while keeping the non-compliance-claim wording.
+
+Reason:
+
+- Use `riscv-software-src/riscv-tests` as a reference for relevant RV32M
+  coverage ideas without copying the upstream harness or vendoring external
+  test files.
+
+Validation:
+
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb build-riscv-tests`
+  passed.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-rv32um`
+  passed with the expanded selected RV32M tests.
+
+Next:
+
+- Continue treating these as selected clean-room simulation tests, not a full
+  imported riscv-tests compliance flow.
+
+### 2026-06-02 - strengthen selected RV32I tests with riscv-tests reference points
+
+Changed:
+
+- `tests/riscv/rv32ui/add.S` and `addi.S`: added signed wraparound,
+  source/destination aliasing, and `x0` source/destination checks inspired by
+  upstream rv32ui coverage categories.
+- `tests/riscv/rv32ui/beq.S`: added negative equality, extra taken-branch
+  flush, and backward-branch loop coverage.
+- `tests/riscv/rv32ui/lb.S`: added negative offset, non-aligned base plus
+  offset, and load destination overwrite checks.
+- `docs/verification.md` and `AGENTS.md`: documented that upstream
+  `riscv-tests` is used only as a coverage reference for selected clean-room
+  tests.
+
+Reason:
+
+- Strengthen the selected rv32ui-style subset by referencing relevant
+  `riscv-software-src/riscv-tests` UI coverage ideas without copying the
+  upstream test files or harness.
+
+Validation:
+
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb build-riscv-tests`
+  passed after the RV32I updates.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-rv32ui`
+  passed with the expanded selected RV32I tests.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-riscv-isa`
+  passed the combined selected rv32ui-style and rv32um-style aggregate after
+  the UI and UM reference-point additions.
+
+Next:
+
+- Keep the tests clean-room and selected-scope while using upstream
+  `riscv-tests` only as a coverage reference.
+
+### 2026-06-02 - align teaching documentation with v0.6 code
+
+Changed:
+
+- `README.md`: added a teaching path, updated v0.6 status wording and top-level
+  SoC wording, corrected Vivado project/bitstream paths, listed the ISA
+  simulation targets, and split CPU-side and loader-side memory maps.
+- `docs/architecture.md`: clarified the current v0.6 SoC structure and
+  separated CPU-side program addresses from loader-side AXI-Lite offsets.
+- `docs/instruction_set.md`: changed the coverage heading and status wording
+  from v0.5-only to current v0.6 RV32IM instruction coverage.
+- `docs/pipeline.md` and `docs/simulation.md`: replaced stale work-in-progress
+  and AXI-Lite RAM/load-store wording with current simple imem/dmem port
+  descriptions and clarified the conservative teaching hazard policy.
+- `docs/roadmap.md`: moved the current milestone from v0.5 to
+  `v0.6-pipeline-bram-loader` and documented focused follow-up work.
+- `docs/baremetal_c.md`, `docs/pynq-z2-led-bringup.md`,
+  `docs/pynqz2_bringup.md`, `docs/jupyter_tetris_plan.md`, and
+  `programs/README.md`: aligned program, board, and future Jupyter notes with
+  unified BRAM, dmem MMIO, and the `0x1000_0000` MMIO map.
+- `docs/verification.md` and `rtl/core/README.md`: clarified that v0.6 carries
+  RV32M into the pipelined core and that older v0.5 tests are separate
+  regression targets.
+
+Reason:
+
+- Keep the repository explanation consistent with the current RTL and make the
+  project easier to read as a teaching SoC.
+
+Validation:
+
+- `rg` documentation scan found no remaining stale v0.5 current-milestone,
+  `0x4000_...`, or AXI-Lite CPU RAM/load-store wording outside historical
+  roadmap context.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-all`
+  passed the current CI aggregate: GPIO smoke, C GPIO firmware, standalone
+  RV32M mul/div, v0.6 BRAM/pipeline/loader tests, and RISC-V ISA smoke.
+
+Next:
+
+- Review rendered Markdown before committing.

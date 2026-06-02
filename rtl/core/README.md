@@ -1,16 +1,21 @@
 # tinycpu RV32IM-target Core
 
-`tinycpu_core_rv32im_axil` is a clean-room educational CPU core targeting
-standard RISC-V RV32IM.
+`tinycpu_core_pipe` is the current v0.6 clean-room educational CPU core
+targeting standard RISC-V RV32IM with simple Harvard-style instruction/data
+memory ports.
 
-`v0.5-rv32im-m-extension` implements RV32I for simple freestanding programs plus
-the standard RV32M multiply/divide instructions: `MUL`, `MULH`, `MULHSU`,
-`MULHU`, `DIV`, `DIVU`, `REM`, and `REMU`.
+The earlier `v0.5-rv32im-m-extension` milestone added RV32M multiply/divide
+instructions: `MUL`, `MULH`, `MULHSU`, `MULHU`, `DIV`, `DIVU`, `REM`, and
+`REMU`. The current v0.6 milestone carries that ISA support into the pipelined
+core.
 
-The core is organized around IF, ID, EX, MEM, and WB stage helper modules. The
-current implementation uses a single AXI-Lite master, so instruction fetch and
-load/store access are serialized around bus transactions. It is stage-structured
-but not a fully overlapped five-stage pipeline.
+The current v0.6 implementation is an overlapped pipeline using IF/ID, ID/EX,
+EX/MEM, and MEM/WB registers. The SoC maps instruction and data ports to a
+unified BRAM and dmem-side MMIO decoder.
 
 The M-extension unit uses a `start`/`busy`/`done` handshake and stalls the
 current instruction until the multiply/divide result is ready for writeback.
+Selected rv32ui-style and rv32um-style ISA tests run in cocotb through the
+`tests/riscv/` environment, including byte/halfword loads and M-result pipeline
+dependency stress coverage. This is simulation coverage, not a full compliance
+claim.

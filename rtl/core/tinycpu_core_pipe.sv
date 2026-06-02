@@ -199,6 +199,7 @@ module tinycpu_core_pipe #(
     logic id_ex_load_use_hazard;
     logic ex_mem_load_use_hazard;
     logic mem_wb_load_use_hazard;
+    logic id_ex_muldiv_use_hazard;
     logic load_use_hazard;
     logic mem_busy;
     logic muldiv_start;
@@ -448,9 +449,14 @@ module tinycpu_core_pipe #(
                                     (mem_wb_rd_q != 5'd0) &&
                                     ((mem_wb_rd_q == id_rs1) ||
                                      (mem_wb_rd_q == id_rs2));
+    assign id_ex_muldiv_use_hazard = if_id_valid_q && id_ex_valid_q &&
+                                     id_ex_is_muldiv_q && (id_ex_rd_q != 5'd0) &&
+                                     ((id_ex_rd_q == id_rs1) ||
+                                      (id_ex_rd_q == id_rs2));
     assign load_use_hazard = id_ex_load_use_hazard ||
                              ex_mem_load_use_hazard ||
-                             mem_wb_load_use_hazard;
+                             mem_wb_load_use_hazard ||
+                             id_ex_muldiv_use_hazard;
 
     assign mem_busy = ex_mem_valid_q && (ex_mem_is_load_q || ex_mem_is_store_q) &&
                       !dmem_ready;

@@ -11,11 +11,11 @@ Reserved GPIO/MMIO addresses:
 
 | Address range | Purpose |
 | --- | --- |
-| `0x4000_0010` | Future game input register |
-| `0x4000_0014` | Future game status register |
-| `0x4000_0100 - 0x4000_01FF` | Future 10x20 grid/framebuffer window |
+| `0x1000_0010` | Future game input register |
+| `0x1000_0014` | Future game status register |
+| `0x1000_0100 - 0x1000_01FF` | Future 10x20 grid/framebuffer window |
 
-The current v0.5 design verifies the CPU/RAM/GPIO path with a tiny assembly
-demo, a GCC-built freestanding C demo, and RV32IM grid math that covers
-`row * 10 + col` and `% 7`. The game-facing registers are included to keep the
-memory map stable.
+The current v0.6 design verifies the CPU/BRAM/MMIO path with a tiny assembly
+demo, a GCC-built freestanding C demo, focused pipeline tests, and selected
+clean-room RV32I/RV32M ISA simulation tests. The game-facing registers are
+reserved to keep the teaching memory map stable for later Jupyter demos.
