@@ -4,13 +4,13 @@
 
 tinycpu is a clean-room educational RV32IM SoC for the PYNQ-Z2 FPGA board.
 
-Current milestone: `v0.5-rv32im-m-extension`.
+Current milestone: `v0.6-pipeline-bram-loader`.
 
-The current CPU is an RV32IM-target educational core. It is organized around
-IF, ID, EX, MEM, and WB stage helper modules, but it is not a fully overlapped
-five-stage pipeline. The current implementation is a stage-structured
-serialized control path with one AXI-Lite master shared by instruction fetch
-and load/store operations.
+The current CPU is an RV32IM-target educational overlapped pipeline core. It
+uses IF/ID, ID/EX, EX/MEM, and MEM/WB pipeline registers, simple
+Harvard-style instruction/data memory ports, a unified 64 KiB BRAM in the SoC,
+a dmem-side CPU-visible MMIO decoder, and an AXI-Lite loader/control slave at
+the SoC boundary. The CPU no longer has its own AXI-Lite master.
 
 Do not add private course code, private solution code, generated Vivado
 projects, bitstreams, firmware binaries, or local reference directories.
@@ -652,8 +652,8 @@ Changed:
   HEX, and DUMP generation under `build/riscv-tests/`.
 - `sim/cocotb/riscv_test_runner.py` and `sim/cocotb/test_riscv_isa.py`: added
   a generic BRAM-preload cocotb runner that resets the SoC, watches dmem MMIO
-  pass/fail writes at `0x8000_0000`, records fail codes, and checks selected
-  store address/data/strobe behavior.
+  pass/fail writes, records fail codes, and checks selected store
+  address/data/strobe behavior.
 - `sim/cocotb/Makefile`: added `build-riscv-tests`, `test-riscv-smoke`,
   `test-rv32ui`, `test-rv32um`, and `test-riscv-isa`; included only the
   stable RISC-V smoke target in `test-all`.
@@ -857,3 +857,154 @@ Validation:
 Next:
 
 - Review rendered Markdown before committing.
+
+### 2026-06-02 - map ISA test status registers into CPU MMIO space
+
+Changed:
+
+- `rtl/soc/tinycpu_dmem_decoder.sv`: added CPU-side dmem MMIO
+  `TEST_STATUS` and `TEST_CODE` registers at `0x1000_0FF0` and
+  `0x1000_0FF4`, with reset-to-zero, byte-lane write strobes, and readback.
+- `tests/riscv/env/tinycpu_test_macros.S` and `tests/riscv/env/crt0.S`:
+  moved the RISC-V ISA pass/fail protocol from `0x8000_0000` to the real
+  `0x1000_0000` CPU MMIO page.
+- `sim/cocotb/riscv_test_runner.py`: updated the watched ISA test status/code
+  addresses to `0x1000_0FF0` and `0x1000_0FF4`.
+- `README.md`, `docs/memory_map.md`, `docs/simulation.md`,
+  `docs/verification.md`, and `AGENTS.md`: documented the unified CPU-side ISA
+  test result registers while keeping the AXI-Lite loader/control local map
+  separate.
+
+Reason:
+
+- Make simulation ISA tests and future board-side flows use the same
+  CPU-visible MMIO result protocol instead of a test-only address outside the
+  documented dmem MMIO page.
+
+Validation:
+
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-riscv-smoke`
+  passed; the pass case wrote `TEST_STATUS = 1`, and the expected-fail case
+  wrote status/code `0x63`.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-rv32ui`
+  passed the selected RV32I clean-room aggregate with the new CPU-side MMIO
+  test result registers.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-rv32um`
+  passed the selected RV32M clean-room aggregate, including `m_pipeline`.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-all`
+  passed the current CI aggregate: GPIO smoke, C GPIO firmware, standalone
+  RV32M mul/div, v0.6 BRAM/pipeline/loader tests, and RISC-V ISA smoke.
+
+Next:
+
+- Keep the AXI-Lite loader/control local map separate from CPU-side dmem MMIO
+  when future Jupyter or board-side flows use these registers.
+
+### 2026-06-02 - remove legacy v0.5 RTL path from current source set
+
+Changed:
+
+- Removed the unused serialized AXI-Lite CPU core and its stage helper files:
+  `rtl/core/tinycpu_core_rv32im_axil.sv`, `tinycpu_if_stage.sv`,
+  `tinycpu_id_stage.sv`, `tinycpu_ex_stage.sv`, `tinycpu_mem_stage.sv`,
+  `tinycpu_wb_stage.sv`, and `tinycpu_hazard.sv`.
+- Removed unused legacy AXI-Lite support modules:
+  `rtl/bus/axil_gpio.sv`, `rtl/bus/axil_interconnect.sv`, and
+  `rtl/bus/axil_ram.sv`.
+- `sim/cocotb/Makefile`: narrowed `VERILOG_SOURCES` to the current v0.6
+  pipeline, BRAM, loader, dmem decoder, and SoC modules.
+- `README.md` and `docs/pipeline.md`: updated repository layout and pipeline
+  wording to describe the remaining current implementation instead of the
+  historical helper-module path.
+- `AGENTS.md`: recorded the cleanup.
+
+Reason:
+
+- The project no longer needs to preserve the earlier teaching path. Keeping
+  only the current v0.6 pipeline/BRAM/loader RTL reduces duplicated constants,
+  stale helper modules, and confusion when explaining the final design.
+
+Validation:
+
+- `rg` scan found no active RTL, simulation, program, or documentation
+  references to the removed modules outside historical `AGENTS.md` log text.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-all`
+  passed after the source-list cleanup.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -B -C sim/cocotb test-all`
+  passed from forced rebuild; the iverilog invocations compiled only the
+  current v0.6 RTL source set: regfile, ALU, decode, forwarding, mul/div,
+  pipeline core, BRAM, AXI-Lite loader, dmem decoder, and SoC.
+
+Next:
+
+- Continue explaining and extending the current v0.6 pipeline/BRAM/loader
+  design without preserving the older serialized AXI-Lite CPU path.
+
+### 2026-06-02 - prepare v0.6 release documentation
+
+Changed:
+
+- `docs/release_checklist.md`: added the v0.6 release checklist, local test
+  commands, manual GitHub About/topics steps, and real-media-only demo media
+  guidance.
+- `docs/releases/v0.6-pipeline-bram-isa-tests.md`: added the v0.6 release
+  notes draft with highlights, verification commands, and limitations.
+- `docs/images/.gitkeep`: added a tracked placeholder for future real board
+  demo media.
+- `README.md`: linked the release checklist and notes draft, clarified that
+  the PYNQ Overlay/Jupyter program-loading demo is planned for v0.7, and added
+  a note that board demo media should only be added after a real PYNQ-Z2 run.
+- `AGENTS.md`: updated the current milestone at the top of this file to
+  `v0.6-pipeline-bram-loader` and recorded the release-readiness cleanup.
+
+Reason:
+
+- Make the repository ready for a clean v0.6 release before starting the v0.7
+  Jupyter overlay loader work, without adding generated artifacts or fake demo
+  media.
+
+Validation:
+
+- `rg` stale-wording scan found no active test protocol references to
+  `0x8000_0000`/`0x8000_0004` or "test-only MMIO"; remaining `0x8000_...`
+  hits are arithmetic edge-case constants or historical log text.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-riscv-smoke`
+  passed.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-rv32ui`
+  passed the selected RV32I clean-room aggregate.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-rv32um`
+  passed the selected RV32M clean-room aggregate.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-all`
+  passed the current CI aggregate.
+
+Next:
+
+- Complete manual GitHub release steps after merge, then start the v0.7
+  Jupyter overlay loader task separately.
+
+### 2026-06-02 - expand CI to selected ISA aggregate
+
+Changed:
+
+- `.github/workflows/ci.yml`: split the cocotb job into the current `test-all`
+  aggregate and a follow-up `test-riscv-isa` step.
+- `README.md`, `docs/verification.md`, and `AGENTS.md`: documented that CI
+  runs both the v0.6 smoke/pipeline aggregate and the selected rv32ui/rv32um
+  ISA aggregate.
+
+Reason:
+
+- Align GitHub Actions with the v0.6 release-readiness claim that selected
+  clean-room rv32ui-style and rv32um-style tests pass, while keeping
+  `test-all` as the fast branch aggregate.
+
+Validation:
+
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-all`
+  passed after the CI workflow update.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-riscv-isa`
+  passed after the CI workflow update.
+
+Next:
+
+- Push the branch and confirm the expanded GitHub Actions workflow passes.

@@ -26,6 +26,10 @@ jobs:
           python3 -m pip install --upgrade pip
           python3 -m pip install -r requirements.txt
 
-      - name: Run cocotb tests
+      - name: Run cocotb CI aggregate
         run: |
           make -C sim/cocotb test-all
+
+      - name: Run selected RISC-V ISA tests
+        run: |
+          make -C sim/cocotb test-riscv-isa

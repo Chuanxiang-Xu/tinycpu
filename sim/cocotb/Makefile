@@ -7,20 +7,10 @@ VERILOG_SOURCES = \
 	$(ROOT_DIR)/rtl/core/tinycpu_regfile.sv \
 	$(ROOT_DIR)/rtl/core/tinycpu_alu.sv \
 	$(ROOT_DIR)/rtl/core/tinycpu_decode.sv \
-	$(ROOT_DIR)/rtl/core/tinycpu_if_stage.sv \
-	$(ROOT_DIR)/rtl/core/tinycpu_id_stage.sv \
-	$(ROOT_DIR)/rtl/core/tinycpu_ex_stage.sv \
-	$(ROOT_DIR)/rtl/core/tinycpu_mem_stage.sv \
-	$(ROOT_DIR)/rtl/core/tinycpu_wb_stage.sv \
-	$(ROOT_DIR)/rtl/core/tinycpu_hazard.sv \
 	$(ROOT_DIR)/rtl/core/tinycpu_forwarding.sv \
 	$(ROOT_DIR)/rtl/core/tinycpu_muldiv.sv \
-	$(ROOT_DIR)/rtl/core/tinycpu_core_rv32im_axil.sv \
 	$(ROOT_DIR)/rtl/core/tinycpu_core_pipe.sv \
 	$(ROOT_DIR)/rtl/mem/tinycpu_tdp_bram.sv \
-	$(ROOT_DIR)/rtl/bus/axil_ram.sv \
-	$(ROOT_DIR)/rtl/bus/axil_gpio.sv \
-	$(ROOT_DIR)/rtl/bus/axil_interconnect.sv \
 	$(ROOT_DIR)/rtl/bus/tinycpu_axil_loader.sv \
 	$(ROOT_DIR)/rtl/soc/tinycpu_dmem_decoder.sv \
 	$(ROOT_DIR)/rtl/soc/tinycpu_soc.sv

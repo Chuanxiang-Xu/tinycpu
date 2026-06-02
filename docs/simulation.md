@@ -111,14 +111,14 @@ The protocol is:
 
 ```text
 program/data BRAM: 0x0000_0000
-MMIO_TEST_STATUS: 0x8000_0000
-MMIO_TEST_CODE:   0x8000_0004
+MMIO_TEST_STATUS: 0x1000_0FF0
+MMIO_TEST_CODE:   0x1000_0FF4
 ```
 
-A test writes `1` to `MMIO_TEST_STATUS` to pass. A non-`1` status fails the
-test, and `MMIO_TEST_CODE` may hold a debug code. The cocotb runner preloads
-the generated HEX into BRAM, resets the CPU, monitors dmem writes, and reports
-pass, fail, or timeout with the last visible PC.
+A test writes `1` to CPU-side MMIO `MMIO_TEST_STATUS` to pass. A non-`1`
+status fails the test, and `MMIO_TEST_CODE` may hold a debug code. The cocotb
+runner preloads the generated HEX into BRAM, resets the CPU, monitors dmem
+writes, and reports pass, fail, or timeout with the last visible PC.
 
 Build only the ISA test artifacts:
 
