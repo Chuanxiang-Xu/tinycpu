@@ -1008,3 +1008,41 @@ Validation:
 Next:
 
 - Push the branch and confirm the expanded GitHub Actions workflow passes.
+
+### 2026-06-02 - finalize v0.6 verification consistency
+
+Changed:
+
+- `docs/verification.md`: rewrote the current verification status around
+  `v0.6-pipeline-bram-loader`, added the requested run commands, test target
+  table, selected rv32ui-style coverage table, selected rv32um-style coverage
+  table, CPU-side `TEST_STATUS`/`TEST_CODE` register map, and explicit
+  unsupported/not-claimed section.
+- `docs/release_checklist.md` and
+  `docs/releases/v0.6-pipeline-bram-isa-tests.md`: added
+  `make -C sim/cocotb test-riscv-isa` to the release validation command list.
+- `AGENTS.md`: recorded the verification documentation cleanup.
+
+Reason:
+
+- Remove remaining release-blocking ambiguity in the verification docs and
+  keep release notes aligned with the selected clean-room rv32ui/rv32um
+  simulation coverage.
+
+Validation:
+
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-riscv-smoke`
+  passed.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-rv32ui`
+  passed.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-rv32um`
+  passed.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-all`
+  passed.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-riscv-isa`
+  passed.
+
+Next:
+
+- Push the documentation cleanup branch and confirm the expanded GitHub Actions
+  workflow passes before tagging v0.6.
