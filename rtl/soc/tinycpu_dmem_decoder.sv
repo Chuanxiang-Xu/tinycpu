@@ -24,13 +24,26 @@ module tinycpu_dmem_decoder #(
     input  logic [31:0] bram_rdata,
 
     input  logic [1:0]  sw,
-    output logic [3:0]  led
+    input  logic [31:0] host_input_i,
+    output logic [3:0]  led,
+    output logic [31:0] test_status_o,
+    output logic [31:0] test_code_o,
+    output logic [31:0] app_status_o,
+    output logic [31:0] app_value0_o,
+    output logic [31:0] app_value1_o,
+    output logic [31:0] frame_counter_o,
+    input  logic [7:0]  fb_mirror_index_i,
+    output logic [31:0] fb_mirror_rdata_o
 );
 
     localparam logic [31:0] LED_OFFSET         = 32'h0000_0000;
     localparam logic [31:0] SW_OFFSET          = 32'h0000_0004;
-    localparam logic [31:0] GAME_INPUT_OFFSET  = 32'h0000_0010;
-    localparam logic [31:0] GAME_STATUS_OFFSET = 32'h0000_0014;
+    localparam logic [31:0] HOST_INPUT_OFFSET  = 32'h0000_0010;
+    localparam logic [31:0] APP_STATUS_OFFSET  = 32'h0000_0014;
+    localparam logic [31:0] APP_VALUE0_OFFSET  = 32'h0000_0018;
+    localparam logic [31:0] APP_VALUE1_OFFSET  = 32'h0000_001C;
+    localparam logic [31:0] FRAME_COUNTER_OFFSET = 32'h0000_0020;
+    localparam logic [31:0] COMMAND_ACK_OFFSET = 32'h0000_0024;
     localparam logic [31:0] FRAMEBUFFER_BASE   = 32'h0000_0100;
     localparam logic [31:0] FRAMEBUFFER_LAST   = 32'h0000_01FF;
     localparam logic [31:0] TEST_STATUS_OFFSET = 32'h0000_0FF0;
@@ -41,8 +54,11 @@ module tinycpu_dmem_decoder #(
     logic        req_pending_q;
     logic [31:0] req_offset_q;
     logic [31:0] led_reg;
-    logic [31:0] game_input_reg;
-    logic [31:0] game_status_reg;
+    logic [31:0] app_status_reg;
+    logic [31:0] app_value0_reg;
+    logic [31:0] app_value1_reg;
+    logic [31:0] frame_counter_reg;
+    logic [31:0] command_ack_reg;
     logic [31:0] test_status_reg;
     logic [31:0] test_code_reg;
     logic [31:0] framebuffer [0:63];
@@ -70,6 +86,15 @@ module tinycpu_dmem_decoder #(
     assign bram_wstrb = (dmem_valid && dmem_we && is_ram) ? dmem_wstrb : 4'b0000;
 
     assign led = led_reg[3:0];
+    assign test_status_o = test_status_reg;
+    assign test_code_o = test_code_reg;
+    assign app_status_o = app_status_reg;
+    assign app_value0_o = app_value0_reg;
+    assign app_value1_o = app_value1_reg;
+    assign frame_counter_o = frame_counter_reg;
+    assign fb_mirror_rdata_o = (fb_mirror_index_i < 8'd64) ?
+                               framebuffer[fb_mirror_index_i[5:0]] :
+                               32'h0000_0000;
 
     always_ff @(posedge clk) begin
         if (rst) begin
@@ -80,8 +105,11 @@ module tinycpu_dmem_decoder #(
             req_pending_q  <= 1'b0;
             req_offset_q   <= 32'h0000_0000;
             led_reg        <= 32'h0000_0000;
-            game_input_reg <= 32'h0000_0000;
-            game_status_reg <= 32'h0000_0000;
+            app_status_reg <= 32'h0000_0000;
+            app_value0_reg <= 32'h0000_0000;
+            app_value1_reg <= 32'h0000_0000;
+            frame_counter_reg <= 32'h0000_0000;
+            command_ack_reg <= 32'h0000_0000;
             test_status_reg <= 32'h0000_0000;
             test_code_reg   <= 32'h0000_0000;
             for (i = 0; i < 64; i = i + 1) begin
@@ -101,16 +129,36 @@ module tinycpu_dmem_decoder #(
                             led_reg[lane * 8 +: 8] <= dmem_wdata[lane * 8 +: 8];
                         end
                     end
-                end else if (mmio_offset == GAME_INPUT_OFFSET) begin
+                end else if (mmio_offset == APP_STATUS_OFFSET) begin
                     for (lane = 0; lane < 4; lane = lane + 1) begin
                         if (dmem_wstrb[lane]) begin
-                            game_input_reg[lane * 8 +: 8] <= dmem_wdata[lane * 8 +: 8];
+                            app_status_reg[lane * 8 +: 8] <= dmem_wdata[lane * 8 +: 8];
                         end
                     end
-                end else if (mmio_offset == GAME_STATUS_OFFSET) begin
+                end else if (mmio_offset == APP_VALUE0_OFFSET) begin
                     for (lane = 0; lane < 4; lane = lane + 1) begin
                         if (dmem_wstrb[lane]) begin
-                            game_status_reg[lane * 8 +: 8] <= dmem_wdata[lane * 8 +: 8];
+                            app_value0_reg[lane * 8 +: 8] <= dmem_wdata[lane * 8 +: 8];
+                        end
+                    end
+                end else if (mmio_offset == APP_VALUE1_OFFSET) begin
+                    for (lane = 0; lane < 4; lane = lane + 1) begin
+                        if (dmem_wstrb[lane]) begin
+                            app_value1_reg[lane * 8 +: 8] <= dmem_wdata[lane * 8 +: 8];
+                        end
+                    end
+                end else if (mmio_offset == FRAME_COUNTER_OFFSET) begin
+                    for (lane = 0; lane < 4; lane = lane + 1) begin
+                        if (dmem_wstrb[lane]) begin
+                            frame_counter_reg[lane * 8 +: 8] <=
+                                dmem_wdata[lane * 8 +: 8];
+                        end
+                    end
+                end else if (mmio_offset == COMMAND_ACK_OFFSET) begin
+                    for (lane = 0; lane < 4; lane = lane + 1) begin
+                        if (dmem_wstrb[lane]) begin
+                            command_ack_reg[lane * 8 +: 8] <=
+                                dmem_wdata[lane * 8 +: 8];
                         end
                     end
                 end else if (mmio_offset == TEST_STATUS_OFFSET) begin
@@ -142,8 +190,12 @@ module tinycpu_dmem_decoder #(
                 case (req_offset_q)
                     LED_OFFSET:         dmem_rdata <= led_reg;
                     SW_OFFSET:          dmem_rdata <= {30'b0, sw};
-                    GAME_INPUT_OFFSET:  dmem_rdata <= game_input_reg;
-                    GAME_STATUS_OFFSET: dmem_rdata <= game_status_reg;
+                    HOST_INPUT_OFFSET:  dmem_rdata <= host_input_i | {30'b0, sw};
+                    APP_STATUS_OFFSET:  dmem_rdata <= app_status_reg;
+                    APP_VALUE0_OFFSET:  dmem_rdata <= app_value0_reg;
+                    APP_VALUE1_OFFSET:  dmem_rdata <= app_value1_reg;
+                    FRAME_COUNTER_OFFSET: dmem_rdata <= frame_counter_reg;
+                    COMMAND_ACK_OFFSET: dmem_rdata <= command_ack_reg;
                     TEST_STATUS_OFFSET: dmem_rdata <= test_status_reg;
                     TEST_CODE_OFFSET:   dmem_rdata <= test_code_reg;
                     default: begin

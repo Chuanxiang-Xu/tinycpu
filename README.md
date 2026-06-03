@@ -9,14 +9,13 @@ tinycpu is a source-first, clean-room educational RV32IM SoC for the PYNQ-Z2
 FPGA board, with dmem-side MMIO, an AXI-Lite loader/control block, cocotb
 simulation, and a Vivado Tcl flow.
 
-Current milestone: `v0.6-pipeline-bram-loader`.
+Current development milestone: `v0.9-jupyter-interactive-io-tetris-demo`.
 
 Important status note: the repository contains an overlapped educational
-pipeline core with Harvard-style simple memory ports and a unified BRAM/loader
-SoC wrapper. The current CI aggregate covers GPIO smoke, C GPIO firmware, the
-standalone RV32M unit, v0.6 BRAM/loader/pipeline tests, and a RISC-V ISA smoke
-target. The older v0.5 directed/grid targets are still kept as individual
-regressions while their expectations are realigned with the v0.6 pipeline.
+pipeline core with Harvard-style simple memory ports, a unified BRAM/loader
+SoC wrapper, selected RV32I/RV32M ISA-style tests, and a PYNQ/Jupyter AXI
+overlay path for interactive demos. Some test target names retain their
+historical `v0.x` prefixes because they mark when that coverage was added.
 
 This repository does not depend on private course solution code, local homework
 directories, generated Vivado projects, or non-public RTL.
@@ -28,9 +27,12 @@ directories, generated Vivado projects, or non-public RTL.
 - Overlapped IF/ID, ID/EX, EX/MEM, and MEM/WB pipeline registers.
 - Unified 64 KiB BRAM behind simple instruction/data memory ports.
 - AXI-Lite loader/control slave at the SoC boundary.
+- PYNQ/Jupyter AXI overlay that connects Zynq PS `M_AXI_GP0` to the loader.
 - PYNQ-Z2 LED/switch MMIO demo through the dmem-side MMIO decoder.
-- Vivado Hardware Manager bitstream programming flow.
-- PYNQ Overlay/Jupyter program-loading demo is planned for v0.7.
+- Generic PYNQ/Jupyter interactive I/O helpers, framebuffer display, and
+  TinyTetris as the first app demo.
+- Vivado Tcl flows for pin smoke, pure PL preloaded firmware, and the
+  PYNQ/Jupyter AXI overlay.
 
 ## Teaching Path
 
@@ -74,11 +76,31 @@ Build the RV32IM multiply/divide/grid math demo:
 make -C programs/rv32im_demo
 ```
 
-Build the PYNQ-Z2 bitstream from Tcl:
+Build the framebuffer demo firmware:
+
+```sh
+make -C programs/framebuffer_demo
+```
+
+Build the interactive I/O and TinyTetris demos:
+
+```sh
+make -C programs/interactive_demo
+make -C programs/tetris
+```
+
+Build the pure PL PYNQ-Z2 bitstream from Tcl:
 
 ```sh
 source ~/vivado/2025.2/Vivado/settings64.sh
 vivado -mode batch -source fpga/vivado/build_bitstream.tcl
+```
+
+Build the PYNQ/Jupyter AXI overlay:
+
+```sh
+source ~/vivado/2025.2/Vivado/settings64.sh
+vivado -mode batch -source fpga/vivado/build_pynq_axi_overlay.tcl
 ```
 
 ## Repository Layout
@@ -88,9 +110,10 @@ rtl/core/       RV32IM-target pipeline core, regfile, ALU, forwarding, mul/div
 rtl/bus/        AXI-Lite loader/control module
 rtl/mem/        Unified BRAM and memory-oriented building blocks
 rtl/soc/        SoC integration
-rtl/board/      PYNQ-Z2 board tops, including pin smoke test
-programs/       Hand-written demo, RV32I C demo, RV32IM C demo
+rtl/board/      PYNQ-Z2 board tops, pin smoke test, and AXI overlay wrapper
+programs/       Hand-written demo, C demos, shared bare-metal support
 sim/cocotb/     cocotb tests and Makefile test entry points
+notebooks/      PYNQ/Jupyter loader, framebuffer, and TinyTetris helpers
 fpga/vivado/    Vivado Tcl and PYNQ-Z2 constraints
 docs/           Architecture, ISA, simulation, verification, bring-up notes
 ```
@@ -105,6 +128,11 @@ PYNQ-Z2 pins
           -> unified 64 KiB BRAM
           -> dmem MMIO decoder
           -> AXI-Lite loader/control slave
+
+PYNQ-Z2 PS M_AXI_GP0
+  -> tinycpu_pynq_system block design
+      -> tinycpu_pynq_axi_overlay
+          -> tinycpu_soc AXI-Lite loader/control slave
 ```
 
 RAM is initialized from a hex file. The CPU reset PC is `0x0000_0000`.
@@ -181,6 +209,13 @@ make -C sim/cocotb test-v06-forwarding
 make -C sim/cocotb test-v06-load-use
 make -C sim/cocotb test-v06-branch-flush
 make -C sim/cocotb test-v06-pipeline
+make -C sim/cocotb test-v07-loader-mirror
+make -C sim/cocotb test-v08-framebuffer-mirror
+make -C sim/cocotb test-v08-framebuffer
+make -C sim/cocotb test-v09-host-input
+make -C sim/cocotb test-v09-interactive-io
+make -C sim/cocotb test-v09-tetris-smoke
+make -C sim/cocotb test-v09-interactive
 make -C sim/cocotb build-riscv-tests
 make -C sim/cocotb test-riscv-smoke
 make -C sim/cocotb test-rv32ui
@@ -193,7 +228,7 @@ make -C sim/cocotb test-all
 `test-v05-rv32im-grid` builds `programs/rv32im_demo/firmware.hex` first.
 Both firmware-backed tests require a RISC-V GNU toolchain.
 The directed RV32I tests generate temporary RAM hex files under `sim_build/`.
-The v0.6 pipeline tests also generate temporary RAM hex files under
+The `test-v06-*` pipeline targets also generate temporary RAM hex files under
 `sim_build/`; `test-v06-pipeline` runs the BRAM, loader, overlap, forwarding,
 load-use, and branch-flush coverage together.
 The RISC-V ISA simulation tests build tinycpu-owned assembly programs into
@@ -211,13 +246,12 @@ make -C sim/cocotb test-riscv-isa
 These targets pass a selected rv32ui-style and rv32um-style subset in
 simulation, including byte/halfword loads and an M-result pipeline stress
 case. They are not a full RISC-V compliance claim.
-The `test-all` target is the first CI aggregate for the current v0.6 branch:
-GPIO smoke, C GPIO firmware, standalone RV32M mul/div, the v0.6 pipeline
-suite, and the RISC-V ISA smoke target. GitHub Actions also runs
-`test-riscv-isa` so the selected rv32ui-style and rv32um-style tests are
-covered before release.
+The `test-all` target is the current CI aggregate: GPIO smoke, C GPIO
+firmware, standalone RV32M mul/div, the BRAM/loader/pipeline suite, and the
+RISC-V ISA smoke target. GitHub Actions also runs `test-riscv-isa` so the
+selected rv32ui-style and rv32um-style tests are covered before release.
 The older v0.5 directed/grid tests remain available as individual regression
-targets while they are being realigned with the v0.6 pipeline core.
+targets while they are being realigned with the current pipeline core.
 
 Expected result for each single-test cocotb target:
 
@@ -256,6 +290,52 @@ Build it with:
 
 ```sh
 make -C programs/rv32im_demo
+```
+
+`programs/framebuffer_demo/` is the RV32IM framebuffer demo. It clears a
+10x20 CPU-side framebuffer, draws a simple moving 2x2 block, updates
+`GAME_STATUS` and `FRAME_COUNTER`, and writes `TEST_STATUS = 1` after a finite
+smoke sequence before continuing animation for Jupyter display.
+
+Build it with:
+
+```sh
+make -C programs/framebuffer_demo
+```
+
+The generated ELF/BIN/HEX/DUMP files are ignored and should not be committed.
+
+## Jupyter Framebuffer Demo
+
+The framebuffer flow uses `notebooks/tinycpu_loader.py` and
+`notebooks/framebuffer_demo.ipynb`. A PYNQ/Jupyter host loads
+`programs/framebuffer_demo/firmware.hex` through the AXI-Lite loader, starts
+the CPU, reads loader-side framebuffer mirror offsets, and renders the first
+200 cells as a 10x20 text grid.
+
+This is not a full Tetris implementation. It does not add HDMI/VGA, keyboard
+input, interrupts, CSRs, or board demo media.
+
+## Jupyter Interactive I/O And TinyTetris
+
+The current PYNQ/Jupyter flow uses a generic app I/O layer:
+
+```text
+Jupyter writes HOST_INPUT -> tinycpu polls HOST_INPUT
+tinycpu writes APP_STATUS / APP_VALUE0 / APP_VALUE1 / FRAME_COUNTER
+tinycpu writes FRAMEBUFFER -> Jupyter reads mirrors and renders a grid
+```
+
+TinyTetris is the first app on top of this interface. The RTL is generic and
+can support other small demos such as Snake, Pong, drawing demos, sorting
+visualizations, or benchmark dashboards.
+
+Build and smoke-test the interactive demos:
+
+```sh
+make -C programs/interactive_demo
+make -C programs/tetris
+make -C sim/cocotb test-v09-interactive
 ```
 
 Run it in cocotb:
@@ -343,6 +423,32 @@ RAM_HEX=/absolute/path/to/programs/c_demo/firmware.hex RAM_INIT_WORDS=256
 $readmem data file '/absolute/path/to/programs/c_demo/firmware.hex' is read successfully
 ```
 
+## Build the PYNQ Jupyter Overlay
+
+The Jupyter demos need the Zynq PS `M_AXI_GP0` port connected to the tinycpu
+AXI-Lite loader/control slave. Build that overlay with:
+
+```sh
+source ~/vivado/2025.2/Vivado/settings64.sh
+vivado -mode batch -source fpga/vivado/build_pynq_axi_overlay.tcl
+```
+
+Project name:
+
+```text
+tinycpu_pynq_v0_9_jupyter_axi_overlay
+```
+
+Bitstream and hardware handoff:
+
+```text
+build/vivado/tinycpu_pynq_v0_9_jupyter_axi_overlay/tinycpu_pynq_v0_9_jupyter_axi_overlay.runs/impl_1/tinycpu_pynq_system_wrapper.bit
+build/vivado/tinycpu_pynq_v0_9_jupyter_axi_overlay/tinycpu_pynq_v0_9_jupyter_axi_overlay.gen/sources_1/bd/tinycpu_pynq_system/hw_handoff/tinycpu_pynq_system.hwh
+```
+
+Copy both files to the PYNQ board and give them matching base names, for
+example `tinycpu.bit` and `tinycpu.hwh`, before opening the notebooks.
+
 ## Program the PYNQ-Z2
 
 Open Vivado Hardware Manager:
@@ -357,7 +463,8 @@ Then:
 2. Open Target.
 3. Auto Connect.
 4. Program Device.
-5. Select `pynqz2_top.bit`.
+5. Select `pynqz2_top.bit` for the pure PL preloaded demo, or
+   `tinycpu_pynq_system_wrapper.bit` for the PYNQ/Jupyter AXI overlay.
 
 Use this bitstream for the full CPU demo:
 
@@ -374,9 +481,13 @@ CPU-side map:
 | `0x0000_0000 - 0x0000_FFFF` | Unified BRAM program/data RAM |
 | `0x1000_0000` | dmem MMIO LED output register |
 | `0x1000_0004` | dmem MMIO switch input register |
-| `0x1000_0010` | Future game input register |
-| `0x1000_0014` | Future game status register |
-| `0x1000_0100 - 0x1000_01FF` | Future game grid/framebuffer window |
+| `0x1000_0010` | `HOST_INPUT`, formerly game input |
+| `0x1000_0014` | `APP_STATUS`, formerly game status |
+| `0x1000_0018` | `APP_VALUE0`, app-defined value such as score |
+| `0x1000_001C` | `APP_VALUE1`, app-defined value such as lines/level |
+| `0x1000_0020` | Frame counter register |
+| `0x1000_0024` | Optional command acknowledgement register |
+| `0x1000_0100 - 0x1000_01FF` | App framebuffer window |
 | `0x1000_0FF0` | RISC-V ISA test status register |
 | `0x1000_0FF4` | RISC-V ISA test code register |
 
@@ -396,6 +507,16 @@ Loader-side AXI-Lite map:
 | `0x10004` | STATUS register |
 | `0x10008` | BOOT_PC register |
 | `0x1000C` | Reserved/debug register |
+| `0x10010` | Read-only `TEST_STATUS` mirror |
+| `0x10014` | Read-only `TEST_CODE` mirror |
+| `0x10018` | Read-only `APP_STATUS` mirror |
+| `0x1001C` | Read-only `APP_VALUE0` mirror |
+| `0x10020` | Read-only `APP_VALUE1` mirror |
+| `0x10024` | Read-only `FRAME_COUNTER` mirror |
+| `0x10030` | Write/read `HOST_INPUT` register |
+| `0x10034` | Write/read optional host command register |
+| `0x10038` | Write host input clear register |
+| `0x10100 - 0x101FF` | Read-only packed framebuffer mirror |
 
 ## Documentation
 
@@ -405,6 +526,9 @@ Loader-side AXI-Lite map:
 - [Simulation](docs/simulation.md)
 - [Bare-metal C](docs/baremetal_c.md)
 - [Memory map](docs/memory_map.md)
+- [Jupyter framebuffer demo](docs/jupyter_framebuffer.md)
+- [Jupyter interactive I/O](docs/jupyter_interactive_io.md)
+- [TinyTetris Jupyter demo](docs/jupyter_tetris.md)
 - [Verification](docs/verification.md)
 - [Release checklist](docs/release_checklist.md)
 - [v0.6 release notes draft](docs/releases/v0.6-pipeline-bram-isa-tests.md)

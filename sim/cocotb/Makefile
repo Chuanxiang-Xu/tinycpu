@@ -51,6 +51,11 @@ COMPILE_ARGS += \
 .PHONY: test-v06-bram test-v06-axil-loader test-v06-pipeline-overlap
 .PHONY: test-v06-forwarding test-v06-load-use test-v06-branch-flush
 .PHONY: test-v06-pipeline
+.PHONY: test-v07-loader-mirror test-v07-pynq-loader
+.PHONY: test-v08-framebuffer-mirror test-v08-framebuffer
+.PHONY: firmware-interactive-demo firmware-tetris-demo
+.PHONY: test-v09-host-input test-v09-interactive-io test-v09-tetris-smoke
+.PHONY: test-v09-interactive
 .PHONY: build-riscv-tests test-riscv-smoke test-rv32ui test-rv32um
 .PHONY: test-riscv-isa
 
@@ -162,6 +167,61 @@ test-v06-axil-loader:
 test-v06-pipeline: test-v06-bram test-v06-pipeline-overlap
 test-v06-pipeline: test-v06-forwarding test-v06-load-use
 test-v06-pipeline: test-v06-branch-flush test-v06-axil-loader
+
+test-v07-loader-mirror:
+	$(MAKE) sim \
+		COCOTB_TEST_MODULES=test_v07_loader_mirror \
+		TOPLEVEL=tinycpu_soc \
+		RAM_HEX=../../programs/led_switch_demo.hex \
+		RAM_INIT_WORDS=4 \
+		SIM_BUILD=sim_build/test-v07-loader-mirror
+
+test-v07-pynq-loader: test-v07-loader-mirror
+
+test-v08-framebuffer-mirror:
+	$(MAKE) sim \
+		COCOTB_TEST_MODULES=test_v08_framebuffer_mirror \
+		TOPLEVEL=tinycpu_soc \
+		RAM_HEX=../../programs/led_switch_demo.hex \
+		RAM_INIT_WORDS=4 \
+		SIM_BUILD=sim_build/test-v08-framebuffer-mirror
+
+test-v08-framebuffer: test-v08-framebuffer-mirror
+
+firmware-interactive-demo:
+	$(MAKE) -C $(ROOT_DIR)/programs/interactive_demo
+
+firmware-tetris-demo:
+	$(MAKE) -C $(ROOT_DIR)/programs/tetris
+
+test-v09-host-input:
+	$(MAKE) sim \
+		COCOTB_TEST_MODULES=test_v09_interactive_io \
+		COCOTB_TESTCASE=test_host_input_reaches_cpu_polling_program \
+		TOPLEVEL=tinycpu_soc \
+		RAM_HEX=../../programs/led_switch_demo.hex \
+		RAM_INIT_WORDS=4 \
+		SIM_BUILD=sim_build/test-v09-host-input
+
+test-v09-interactive-io:
+	$(MAKE) sim \
+		COCOTB_TEST_MODULES=test_v09_interactive_io \
+		COCOTB_TESTCASE=test_interactive_io_status_values_and_framebuffer \
+		TOPLEVEL=tinycpu_soc \
+		RAM_HEX=../../programs/led_switch_demo.hex \
+		RAM_INIT_WORDS=4 \
+		SIM_BUILD=sim_build/test-v09-interactive-io
+
+test-v09-tetris-smoke: firmware-tetris-demo
+	$(MAKE) sim \
+		COCOTB_TEST_MODULES=test_v09_tetris_smoke \
+		TOPLEVEL=tinycpu_soc \
+		RAM_HEX=../../programs/led_switch_demo.hex \
+		RAM_INIT_WORDS=4 \
+		SIM_BUILD=sim_build/test-v09-tetris-smoke
+
+test-v09-interactive: test-v09-host-input test-v09-interactive-io
+test-v09-interactive: test-v09-tetris-smoke
 
 build-riscv-tests:
 	python3 build_riscv_tests.py

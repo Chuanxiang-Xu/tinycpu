@@ -20,5 +20,29 @@ python3 programs/led_switch_demo.py
 ```
 
 `led_switch_demo.S` is the human-readable assembly source. The C firmware flow
-lives in `programs/c_demo/`, and the RV32IM multiply/divide grid-math demo
-lives in `programs/rv32im_demo/`.
+lives in `programs/c_demo/`, the RV32IM multiply/divide grid-math demo lives
+in `programs/rv32im_demo/`, the framebuffer display demo lives in
+`programs/framebuffer_demo/`, the generic interactive I/O smoke demo lives in
+`programs/interactive_demo/`, and TinyTetris lives in `programs/tetris/`.
+
+Shared bare-metal support for newer demos lives in `programs/common/`:
+
+- `crt0.S`: reset entry, stack setup, and BSS clearing.
+- `linker.ld`: 64 KiB BRAM memory layout.
+- `tinycpu_mmio.h`: CPU-side MMIO register definitions.
+- `makehex.py`: binary-to-hex conversion helper.
+
+Build the framebuffer demo with:
+
+```sh
+make -C programs/framebuffer_demo
+```
+
+Build the interactive I/O and TinyTetris demos with:
+
+```sh
+make -C programs/interactive_demo
+make -C programs/tetris
+```
+
+The generated firmware outputs are ignored and should not be committed.

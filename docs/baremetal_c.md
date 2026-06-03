@@ -1,7 +1,7 @@
 # Bare-Metal C
 
 tinycpu supports simple freestanding C programs for the implemented RV32I/RV32M
-instruction set. The current v0.6 SoC runs those programs from unified BRAM and
+instruction set. The current SoC runs those programs from unified BRAM and
 reaches board IO through dmem-side MMIO.
 
 ## Toolchain
