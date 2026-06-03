@@ -1,7 +1,7 @@
 # Architecture
 
-`v0.6-pipeline-bram-loader` is a source-first, clean-room educational RV32IM
-SoC for the PYNQ-Z2 FPGA board.
+`v0.9-jupyter-interactive-io-tetris-demo` is a source-first, clean-room
+educational RV32IM SoC for the PYNQ-Z2 FPGA board.
 
 ```text
 PYNQ-Z2 pins
@@ -11,6 +11,11 @@ PYNQ-Z2 pins
           -> unified 64 KiB BRAM
           -> dmem MMIO decoder
           -> AXI-Lite loader/control slave
+
+PYNQ-Z2 PS M_AXI_GP0
+  -> tinycpu_pynq_system block design
+      -> tinycpu_pynq_axi_overlay
+          -> tinycpu_soc AXI-Lite loader/control slave
 ```
 
 The CPU target ISA is standard RISC-V RV32IM. The current milestone carries
@@ -31,20 +36,43 @@ For teaching, keep these two address spaces separate:
 
 - CPU-side addresses are what RISC-V programs use: BRAM at `0x0000_0000` and
   dmem MMIO at `0x1000_0000`.
-- Loader-side offsets are what a future PS/Jupyter host would use through the
-  AXI-Lite loader/control slave.
+- Loader-side offsets are what the PS/Jupyter host uses through the AXI-Lite
+  loader/control slave in the `build_pynq_axi_overlay.tcl` overlay.
 
-The board wrapper, `pynqz2_top`, connects PYNQ-Z2 pins to the SoC:
+The loader/control slave also exposes read-only mirrors of CPU-written
+`TEST_STATUS` and `TEST_CODE` registers so a PS/Jupyter host can load a
+program, start the CPU, and poll a small pass/fail result without pretending to
+access the CPU-side `0x1000_xxxx` MMIO page directly.
+
+For `v0.9-jupyter-interactive-io-tetris-demo`, the same mirror pattern is
+extended to generic app I/O: Jupyter writes `HOST_INPUT` at loader offset
+`0x10030`, while the CPU polls `HOST_INPUT` at `0x1000_0010` and writes
+`APP_STATUS`, `APP_VALUE0`, `APP_VALUE1`, `FRAME_COUNTER`, and a packed
+framebuffer. The CPU continues to use only its dmem MMIO page.
+
+The pure PL board wrapper, `pynqz2_top`, connects PYNQ-Z2 pins to the SoC:
 
 - `sysclk` to SoC clock.
 - `btn[0]` to active-high reset.
 - `sw[1:0]` to GPIO switch input.
 - `led[3:0]` to GPIO LED output.
 
-The Vivado project name for this milestone is:
+The Jupyter overlay wrapper, `tinycpu_pynq_axi_overlay`, is used as a Vivado
+block-design module reference. The Zynq PS provides `FCLK_CLK0`,
+`FCLK_RESET0_N`, and `M_AXI_GP0`; an AXI interconnect maps the loader/control
+slave at PS address `0x43C0_0000`. PL `btn[0]` remains an active-high local
+reset input, while the loader can also reset, halt, load, and start the CPU.
+
+The pure PL Vivado project name is:
 
 ```text
 tinycpu_pynq_v0_6_pipeline_bram_loader
+```
+
+The PYNQ/Jupyter AXI overlay project name is:
+
+```text
+tinycpu_pynq_v0_9_jupyter_axi_overlay
 ```
 
 This project is an independent educational implementation. It does not require

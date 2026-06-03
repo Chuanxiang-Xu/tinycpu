@@ -10,7 +10,7 @@ The core is organized around the classic five-stage model:
 | MEM | Simple dmem load/store through BRAM or dmem MMIO |
 | WB | Register writeback |
 
-The v0.6 hardware introduces a real overlapped pipeline with IF/ID, ID/EX,
+The current hardware uses a real overlapped pipeline with IF/ID, ID/EX,
 EX/MEM, and MEM/WB valid registers.
 
 The CPU core no longer has an AXI-Lite master. It uses simple instruction and

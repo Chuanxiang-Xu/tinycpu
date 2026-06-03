@@ -1,7 +1,10 @@
 # Simulation
 
-`v0.6-pipeline-bram-loader` uses cocotb and Icarus Verilog for lightweight RTL
-simulation.
+tinycpu uses cocotb and Icarus Verilog for lightweight RTL simulation. The
+current simulation suite covers the pipeline/BRAM/loader base, selected
+RV32I/RV32M ISA behavior, loader mirrors, framebuffer mirrors, host input, and
+TinyTetris smoke behavior. Some target names retain historical `v0.x` prefixes
+because they mark when that coverage was introduced.
 
 ## Setup
 
@@ -43,6 +46,13 @@ make -C sim/cocotb test-v06-forwarding
 make -C sim/cocotb test-v06-load-use
 make -C sim/cocotb test-v06-branch-flush
 make -C sim/cocotb test-v06-pipeline
+make -C sim/cocotb test-v07-loader-mirror
+make -C sim/cocotb test-v08-framebuffer-mirror
+make -C sim/cocotb test-v08-framebuffer
+make -C sim/cocotb test-v09-host-input
+make -C sim/cocotb test-v09-interactive-io
+make -C sim/cocotb test-v09-tetris-smoke
+make -C sim/cocotb test-v09-interactive
 make -C sim/cocotb build-riscv-tests
 make -C sim/cocotb test-riscv-smoke
 make -C sim/cocotb test-rv32ui
@@ -91,7 +101,7 @@ make -C programs/rv32im_demo
 make -C sim/cocotb test-v05-rv32im-grid
 ```
 
-The v0.6-specific targets cover the new architecture:
+The pipeline/BRAM/loader targets cover the base architecture:
 
 - `test-v06-bram`: byte writes, dual-port reads, and same-cycle port access.
 - `test-v06-axil-loader`: AXI-Lite firmware load, boot control, and blocked
@@ -102,6 +112,20 @@ The v0.6-specific targets cover the new architecture:
   compare.
 - `test-v06-branch-flush`: taken branch, not-taken branch, JAL, and JALR
   flush behavior.
+- `test-v07-loader-mirror`: loads a small program through AXI-Lite, lets it
+  write CPU-side `TEST_STATUS`/`TEST_CODE`, then verifies the PS-visible
+  read-only mirror offsets at `0x10010`/`0x10014`.
+- `test-v08-framebuffer-mirror`: loads a small program through AXI-Lite, lets
+  it write CPU-side `GAME_STATUS`, `FRAME_COUNTER`, and framebuffer cells,
+  then verifies the PS-visible framebuffer mirror at `0x10100`.
+- `test-v08-framebuffer`: aggregate alias for the v0.8 framebuffer tests.
+- `test-v09-host-input`: writes loader-side `HOST_INPUT_WRITE` and verifies a
+  CPU polling program observes it.
+- `test-v09-interactive-io`: verifies generic `APP_STATUS`, `APP_VALUE0`,
+  `APP_VALUE1`, `FRAME_COUNTER`, and framebuffer mirrors after host input.
+- `test-v09-tetris-smoke`: loads TinyTetris, sends start/move input, and
+  verifies app/framebuffer mirrors become active.
+- `test-v09-interactive`: aggregate alias for the v0.9 interactive tests.
 
 The RISC-V ISA-style targets use a clean-room tinycpu test environment under
 `tests/riscv/`. They do not vendor the external `riscv-tests` repository and do
@@ -143,11 +167,11 @@ make -C sim/cocotb test-rv32um
 make -C sim/cocotb test-riscv-isa
 ```
 
-`test-all` is the CI aggregate for the current v0.6 branch. It runs the GPIO
-smoke test, C GPIO firmware test, standalone RV32M mul/div unit test, and the
-v0.6 BRAM/loader/pipeline suite, plus the RISC-V ISA smoke target. The v0.5
-directed and grid firmware targets remain individually runnable while their
-expectations are being realigned with the v0.6 pipeline core.
+`test-all` is the current CI aggregate. It runs the GPIO smoke test, C GPIO
+firmware test, standalone RV32M mul/div unit test, the BRAM/loader/pipeline
+suite, and the RISC-V ISA smoke target. The v0.5 directed and grid firmware
+targets remain individually runnable while their expectations are being
+realigned with the current pipeline core.
 
 ## Generated Outputs
 
@@ -163,5 +187,17 @@ programs/c_demo/firmware.hex
 programs/rv32im_demo/firmware.elf
 programs/rv32im_demo/firmware.bin
 programs/rv32im_demo/firmware.hex
+programs/framebuffer_demo/firmware.elf
+programs/framebuffer_demo/firmware.bin
+programs/framebuffer_demo/firmware.hex
+programs/framebuffer_demo/firmware.dump
+programs/interactive_demo/firmware.elf
+programs/interactive_demo/firmware.bin
+programs/interactive_demo/firmware.hex
+programs/interactive_demo/firmware.dump
+programs/tetris/firmware.elf
+programs/tetris/firmware.bin
+programs/tetris/firmware.hex
+programs/tetris/firmware.dump
 build/riscv-tests/
 ```

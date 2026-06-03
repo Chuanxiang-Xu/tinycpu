@@ -1,6 +1,6 @@
 # PYNQ-Z2 LED Bring-Up
 
-The current public bring-up path is `v0.6-pipeline-bram-loader`. The LED
+The pure PL LED bring-up path uses the preloaded tinycpu bitstream. The LED
 behavior is driven by a standard RISC-V program running from unified BRAM, not
 by direct switch-to-LED wiring.
 

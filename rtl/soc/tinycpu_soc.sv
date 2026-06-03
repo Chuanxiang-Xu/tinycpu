@@ -74,6 +74,15 @@ module tinycpu_soc #(
     logic        cpu_running;
     logic        cpu_halted;
     logic        cpu_trap;
+    logic [31:0] test_status;
+    logic [31:0] test_code;
+    logic [31:0] app_status;
+    logic [31:0] app_value0;
+    logic [31:0] app_value1;
+    logic [31:0] frame_counter;
+    logic [31:0] host_input;
+    logic [7:0]  fb_mirror_index;
+    logic [31:0] fb_mirror_rdata;
 
     logic        dbg_if_id_valid;
     logic        dbg_id_ex_valid;
@@ -133,7 +142,16 @@ module tinycpu_soc #(
         .bram_wstrb(cpu_bram_wstrb),
         .bram_rdata(bram_b_rdata),
         .sw        (sw),
-        .led       (led)
+        .host_input_i(host_input),
+        .led       (led),
+        .test_status_o(test_status),
+        .test_code_o  (test_code),
+        .app_status_o (app_status),
+        .app_value0_o (app_value0),
+        .app_value1_o (app_value1),
+        .frame_counter_o(frame_counter),
+        .fb_mirror_index_i(fb_mirror_index),
+        .fb_mirror_rdata_o(fb_mirror_rdata)
     );
 
     tinycpu_axil_loader loader_i (
@@ -167,7 +185,16 @@ module tinycpu_soc #(
         .boot_pc          (boot_pc),
         .cpu_running      (cpu_running),
         .cpu_halted       (cpu_halted),
-        .cpu_trap         (cpu_trap)
+        .cpu_trap         (cpu_trap),
+        .test_status_i    (test_status),
+        .test_code_i      (test_code),
+        .app_status_i     (app_status),
+        .app_value0_i     (app_value0),
+        .app_value1_i     (app_value1),
+        .frame_counter_i  (frame_counter),
+        .host_input_o     (host_input),
+        .fb_mirror_index_o(fb_mirror_index),
+        .fb_mirror_rdata_i(fb_mirror_rdata)
     );
 
     always @* begin

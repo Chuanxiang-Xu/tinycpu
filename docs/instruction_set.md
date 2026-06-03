@@ -3,15 +3,14 @@
 The target ISA is standard RISC-V `RV32IM`.
 
 The earlier `v0.5-rv32im-m-extension` milestone added RV32M
-multiply/divide support. The current `v0.6-pipeline-bram-loader` milestone
-carries that RV32IM target into the pipelined core and verifies a selected
-clean-room ISA subset in cocotb.
+multiply/divide support. The current pipelined SoC carries that RV32IM target
+forward and verifies a selected clean-room ISA subset in cocotb.
 
 ## Implemented Status
 
 - RV32I is implemented.
 - RV32M multiply/divide is implemented.
-- The v0.6 simulation flow passes a selected rv32ui-style and rv32um-style
+- The current simulation flow passes a selected rv32ui-style and rv32um-style
   clean-room test subset, including byte/halfword loads and M-result pipeline
   dependency stress coverage. This is not a full RISC-V compliance claim.
 - 32-bit fixed-length instructions are supported.

@@ -23,6 +23,24 @@ programs/rv32im_demo/*.bin
 programs/rv32im_demo/*.hex
 programs/rv32im_demo/*.map
 programs/rv32im_demo/*.lst
+programs/framebuffer_demo/*.elf
+programs/framebuffer_demo/*.bin
+programs/framebuffer_demo/*.hex
+programs/framebuffer_demo/*.dump
+programs/framebuffer_demo/*.map
+programs/framebuffer_demo/*.lst
+programs/interactive_demo/*.elf
+programs/interactive_demo/*.bin
+programs/interactive_demo/*.hex
+programs/interactive_demo/*.dump
+programs/interactive_demo/*.map
+programs/interactive_demo/*.lst
+programs/tetris/*.elf
+programs/tetris/*.bin
+programs/tetris/*.hex
+programs/tetris/*.dump
+programs/tetris/*.map
+programs/tetris/*.lst
 
 # Vivado logs and generated files
 .Xil/
@@ -48,6 +66,7 @@ fpga/**/build/*
 
 # Local reference material that is not part of the public project
 upstream/
+NA/
 
 # Editor
 .agents/
