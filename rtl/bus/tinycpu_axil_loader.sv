@@ -6,6 +6,14 @@
 //   0x10004: STATUS  {loader_blocked, cpu_trap, cpu_halted, cpu_running}
 //   0x10008: BOOT_PC
 //   0x1000c: DEBUG/RESERVED
+//   0x10010: TEST_STATUS mirror from CPU-side MMIO
+//   0x10014: TEST_CODE mirror from CPU-side MMIO
+//   0x10018: APP_STATUS mirror from CPU-side MMIO
+//   0x1001c: APP_VALUE0 mirror from CPU-side MMIO
+//   0x10020: APP_VALUE1 mirror from CPU-side MMIO
+//   0x10024: FRAME_COUNTER mirror from CPU-side MMIO
+//   0x10030: HOST_INPUT write/readback register
+//   0x10100 - 0x101ff: FRAMEBUFFER mirror window
 module tinycpu_axil_loader (
     input  logic        clk,
     input  logic        rst,
@@ -42,7 +50,16 @@ module tinycpu_axil_loader (
 
     input  logic        cpu_running,
     input  logic        cpu_halted,
-    input  logic        cpu_trap
+    input  logic        cpu_trap,
+    input  logic [31:0] test_status_i,
+    input  logic [31:0] test_code_i,
+    input  logic [31:0] app_status_i,
+    input  logic [31:0] app_value0_i,
+    input  logic [31:0] app_value1_i,
+    input  logic [31:0] frame_counter_i,
+    output logic [31:0] host_input_o,
+    output logic [7:0]  fb_mirror_index_o,
+    input  logic [31:0] fb_mirror_rdata_i
 );
 
     localparam logic [31:0] RAM_LAST       = 32'h0000_FFFF;
@@ -50,6 +67,17 @@ module tinycpu_axil_loader (
     localparam logic [31:0] STATUS_OFFSET  = 32'h0001_0004;
     localparam logic [31:0] BOOT_PC_OFFSET = 32'h0001_0008;
     localparam logic [31:0] DEBUG_OFFSET   = 32'h0001_000C;
+    localparam logic [31:0] TEST_STATUS_MIRROR_OFFSET = 32'h0001_0010;
+    localparam logic [31:0] TEST_CODE_MIRROR_OFFSET   = 32'h0001_0014;
+    localparam logic [31:0] APP_STATUS_MIRROR_OFFSET    = 32'h0001_0018;
+    localparam logic [31:0] APP_VALUE0_MIRROR_OFFSET    = 32'h0001_001C;
+    localparam logic [31:0] APP_VALUE1_MIRROR_OFFSET    = 32'h0001_0020;
+    localparam logic [31:0] FRAME_COUNTER_MIRROR_OFFSET = 32'h0001_0024;
+    localparam logic [31:0] HOST_INPUT_WRITE_OFFSET     = 32'h0001_0030;
+    localparam logic [31:0] HOST_COMMAND_WRITE_OFFSET   = 32'h0001_0034;
+    localparam logic [31:0] HOST_INPUT_CLEAR_OFFSET     = 32'h0001_0038;
+    localparam logic [31:0] FRAMEBUFFER_MIRROR_BASE     = 32'h0001_0100;
+    localparam logic [31:0] FRAMEBUFFER_MIRROR_END      = 32'h0001_01FF;
 
     localparam logic [1:0] RESP_OKAY  = 2'b00;
     localparam logic [1:0] RESP_SLVERR = 2'b10;
@@ -57,11 +85,14 @@ module tinycpu_axil_loader (
     logic [31:0] awaddr_q;
     logic        aw_seen_q;
     logic [31:0] debug_q;
+    logic [31:0] host_input_reg;
+    logic [31:0] host_command_reg;
     logic        blocked_q;
     logic        write_fire;
     logic        read_fire;
     logic        write_to_ram;
     logic        read_from_ram;
+    logic        read_from_fb_mirror;
     logic        loader_allowed;
     logic [31:0] status_word;
     logic        awvalid_hi;
@@ -83,8 +114,14 @@ module tinycpu_axil_loader (
     assign read_fire = arvalid_hi && !s_axi_rvalid;
     assign write_to_ram = ((aw_seen_q ? awaddr_q : s_axi_awaddr) <= RAM_LAST);
     assign read_from_ram = (s_axi_araddr <= RAM_LAST);
+    assign read_from_fb_mirror = (s_axi_araddr >= FRAMEBUFFER_MIRROR_BASE) &&
+                                 (s_axi_araddr <= FRAMEBUFFER_MIRROR_END);
     assign loader_allowed = cpu_halt_req || cpu_reset_req || cpu_halted || !cpu_running;
     assign status_word = {28'b0, blocked_q, cpu_trap, cpu_halted, cpu_running};
+    assign host_input_o = host_input_reg;
+    assign fb_mirror_index_o = read_from_fb_mirror ?
+                               ((s_axi_araddr - FRAMEBUFFER_MIRROR_BASE) >> 2) :
+                               8'h00;
 
     always @* begin
         s_axi_awready = !aw_seen_q && !s_axi_bvalid;
@@ -110,6 +147,8 @@ module tinycpu_axil_loader (
             cpu_clear_pipeline <= 1'b0;
             boot_pc           <= 32'h0000_0000;
             debug_q           <= 32'h0000_0000;
+            host_input_reg    <= 32'h0000_0000;
+            host_command_reg  <= 32'h0000_0000;
             blocked_q         <= 1'b0;
         end else begin
             loader_bram_en    <= 1'b0;
@@ -174,6 +213,25 @@ module tinycpu_axil_loader (
                                 end
                             end
                         end
+                        HOST_INPUT_WRITE_OFFSET: begin
+                            for (lane = 0; lane < 4; lane = lane + 1) begin
+                                if (s_axi_wstrb[lane]) begin
+                                    host_input_reg[lane * 8 +: 8] <=
+                                        s_axi_wdata[lane * 8 +: 8];
+                                end
+                            end
+                        end
+                        HOST_COMMAND_WRITE_OFFSET: begin
+                            for (lane = 0; lane < 4; lane = lane + 1) begin
+                                if (s_axi_wstrb[lane]) begin
+                                    host_command_reg[lane * 8 +: 8] <=
+                                        s_axi_wdata[lane * 8 +: 8];
+                                end
+                            end
+                        end
+                        HOST_INPUT_CLEAR_OFFSET: begin
+                            host_input_reg <= 32'h0000_0000;
+                        end
                         default: begin
                             s_axi_bresp <= RESP_SLVERR;
                         end
@@ -199,9 +257,21 @@ module tinycpu_axil_loader (
                         STATUS_OFFSET:  s_axi_rdata <= status_word;
                         BOOT_PC_OFFSET: s_axi_rdata <= boot_pc;
                         DEBUG_OFFSET:   s_axi_rdata <= debug_q;
+                        TEST_STATUS_MIRROR_OFFSET: s_axi_rdata <= test_status_i;
+                        TEST_CODE_MIRROR_OFFSET:   s_axi_rdata <= test_code_i;
+                        APP_STATUS_MIRROR_OFFSET: s_axi_rdata <= app_status_i;
+                        APP_VALUE0_MIRROR_OFFSET: s_axi_rdata <= app_value0_i;
+                        APP_VALUE1_MIRROR_OFFSET: s_axi_rdata <= app_value1_i;
+                        FRAME_COUNTER_MIRROR_OFFSET: s_axi_rdata <= frame_counter_i;
+                        HOST_INPUT_WRITE_OFFSET: s_axi_rdata <= host_input_reg;
+                        HOST_COMMAND_WRITE_OFFSET: s_axi_rdata <= host_command_reg;
                         default: begin
-                            s_axi_rdata <= 32'h0000_0000;
-                            s_axi_rresp <= RESP_SLVERR;
+                            if (read_from_fb_mirror) begin
+                                s_axi_rdata <= fb_mirror_rdata_i;
+                            end else begin
+                                s_axi_rdata <= 32'h0000_0000;
+                                s_axi_rresp <= RESP_SLVERR;
+                            end
                         end
                     endcase
                 end

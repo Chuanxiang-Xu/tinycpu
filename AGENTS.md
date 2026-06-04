@@ -4,13 +4,21 @@
 
 tinycpu is a clean-room educational RV32IM SoC for the PYNQ-Z2 FPGA board.
 
-Current milestone: `v0.6-pipeline-bram-loader`.
+Current development milestone: `v1.0-stable-rv32im-pipeline-core`.
 
 The current CPU is an RV32IM-target educational overlapped pipeline core. It
 uses IF/ID, ID/EX, EX/MEM, and MEM/WB pipeline registers, simple
 Harvard-style instruction/data memory ports, a unified 64 KiB BRAM in the SoC,
-a dmem-side CPU-visible MMIO decoder, and an AXI-Lite loader/control slave at
-the SoC boundary. The CPU no longer has its own AXI-Lite master.
+a dmem-side CPU-visible MMIO decoder, an AXI-Lite loader/control slave at the
+SoC boundary, PS-visible loader mirrors for test/app/framebuffer status,
+loader-side host input writes, and Jupyter/Python helper files for framebuffer
+and TinyTetris demos. A PYNQ overlay Tcl flow connects Zynq PS `M_AXI_GP0` to
+the loader/control slave through an AXI interconnect. The CPU no longer has
+its own AXI-Lite master. For v1.0, the stable release claim is limited to
+selected clean-room RV32I/RV32M simulation, pipeline hazard/flush coverage, C
+firmware smoke tests, and AXI-Lite loader/control simulation. PYNQ/Jupyter,
+framebuffer, and TinyTetris remain demo paths unless board validation evidence
+is added.
 
 Do not add private course code, private solution code, generated Vivado
 projects, bitstreams, firmware binaries, or local reference directories.
@@ -61,6 +69,14 @@ make -C sim/cocotb test-v06-forwarding
 make -C sim/cocotb test-v06-load-use
 make -C sim/cocotb test-v06-branch-flush
 make -C sim/cocotb test-v06-pipeline
+make -C sim/cocotb test-v07-loader-mirror
+make -C sim/cocotb test-v08-framebuffer-mirror
+make -C sim/cocotb test-v08-framebuffer
+make -C sim/cocotb test-v09-host-input
+make -C sim/cocotb test-v09-interactive-io
+make -C sim/cocotb test-v09-tetris-smoke
+make -C sim/cocotb test-v09-interactive
+make -C sim/cocotb test-v10-stable
 make -C sim/cocotb test-all
 ```
 
@@ -76,11 +92,25 @@ RV32IM demo build:
 make -C programs/rv32im_demo
 ```
 
+Framebuffer demo build:
+
+```sh
+make -C programs/framebuffer_demo
+```
+
+Interactive/TinyTetris demo builds:
+
+```sh
+make -C programs/interactive_demo
+make -C programs/tetris
+```
+
 Vivado Tcl build:
 
 ```sh
 source ~/vivado/2025.2/Vivado/settings64.sh
 vivado -mode batch -source fpga/vivado/build_bitstream.tcl
+vivado -mode batch -source fpga/vivado/build_pynq_axi_overlay.tcl
 ```
 
 ## Documentation synchronization rule
@@ -102,6 +132,49 @@ Every file modification must include a synchronized update to this root
 `AGENTS.md`. Do not create `agent.md` or `Agent.md`.
 
 ## Maintenance log
+
+### 2026-06-04 - prepare v1.0 stable RV32IM pipeline release candidate
+
+Changed:
+
+- `sim/cocotb/Makefile`: added `test-v10-stable` as the v1.0 release
+  aggregate and made `test-all` an alias for it.
+- `.github/workflows/ci.yml`: changed CI to run
+  `make -C sim/cocotb test-v10-stable` as the single cocotb entry point.
+- `README.md`, `docs/architecture.md`, `docs/verification.md`,
+  `docs/roadmap.md`, `docs/pipeline.md`, `docs/simulation.md`, and
+  `rtl/core/README.md`: aligned the v1.0 release claim with selected
+  RV32I/RV32M, pipeline, firmware smoke, and AXI-Lite loader/control
+  simulation coverage.
+- `AGENTS.md`: recorded the v1.0 milestone, stable aggregate, and release
+  scope.
+
+Reason:
+
+- Prepare a precise v1.0 stable RV32IM pipeline-core release candidate without
+  adding new architecture features or overstating RISC-V compliance, traps,
+  interrupts, board, Jupyter, framebuffer, or TinyTetris validation.
+
+Validation:
+
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-v10-stable`
+  passed. The aggregate ran GPIO smoke, C GPIO firmware, standalone RV32M
+  mul/div, BRAM, AXI-Lite loader/control, pipeline overlap, forwarding,
+  load-use, branch-flush, RISC-V smoke, selected rv32ui-style, and selected
+  rv32um-style tests.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-riscv-isa`
+  passed the selected rv32ui-style and rv32um-style aggregate.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C programs/c_demo`
+  passed with no rebuild needed.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C programs/rv32im_demo`
+  passed and rebuilt local ignored firmware artifacts.
+- `command -v vivado` failed, so Vivado/PYNQ bitstream generation was not run
+  in this local environment.
+
+Next:
+
+- Push the v1.0 release-prep branch and let GitHub Actions run the
+  `test-v10-stable` CI entry point.
 
 ### 2026-05-19 - unify v0.5 milestone narrative
 
@@ -1046,3 +1119,498 @@ Next:
 
 - Push the documentation cleanup branch and confirm the expanded GitHub Actions
   workflow passes before tagging v0.6.
+
+### 2026-06-03 - add v0.7 loader test-result mirrors
+
+Changed:
+
+- `rtl/soc/tinycpu_dmem_decoder.sv`: exposed CPU-side `TEST_STATUS` and
+  `TEST_CODE` registers as SoC-level signals.
+- `rtl/soc/tinycpu_soc.sv`: connected the dmem decoder test-result signals
+  into the AXI-Lite loader/control block.
+- `rtl/bus/tinycpu_axil_loader.sv`: added read-only loader-side mirror
+  offsets `0x10010` and `0x10014` for CPU-written test status/code.
+- `sim/cocotb/test_v07_loader_mirror.py`: added a loader-flow regression that
+  writes a program into BRAM, starts the CPU, and polls the mirror registers.
+- `sim/cocotb/Makefile`: added `test-v07-loader-mirror` and the placeholder
+  aggregate alias `test-v07-pynq-loader`.
+- `README.md`, `docs/architecture.md`, `docs/memory_map.md`,
+  `docs/simulation.md`, `docs/verification.md`, and `docs/roadmap.md`:
+  documented the PS-visible mirror offsets and v0.7 preparatory test target.
+- `AGENTS.md`: recorded the loader mirror update.
+
+Reason:
+
+- Start the `v0.7-pynq-jupyter-loader` path by allowing a future Jupyter/Python
+  loader to read CPU-written pass/fail status through the AXI-Lite
+  loader/control address space without aliasing CPU-side MMIO addresses.
+
+Validation:
+
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-v07-loader-mirror`
+  passed.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-v06-pipeline`
+  passed after the loader/control interface update.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-all`
+  passed after the mirror update.
+
+Next:
+
+- Add the Python/PYNQ loader helper and notebook flow once the board overlay
+  integration point is ready.
+
+### 2026-06-03 - add v0.8 Jupyter framebuffer demo path
+
+Changed:
+
+- `rtl/soc/tinycpu_dmem_decoder.sv`: added CPU-side `FRAME_COUNTER`, exposed
+  `GAME_STATUS`/`FRAME_COUNTER`, and exposed packed framebuffer readback for
+  loader mirrors.
+- `rtl/soc/tinycpu_soc.sv`: wired game/framebuffer mirror signals between the
+  dmem decoder and AXI-Lite loader/control block.
+- `rtl/bus/tinycpu_axil_loader.sv`: added read-only loader-side mirror offsets
+  `0x10018`, `0x1001C`, and `0x10100 - 0x101FF`.
+- `sim/cocotb/test_v08_framebuffer_mirror.py`: added framebuffer mirror
+  coverage for game status, frame counter, and little-endian packed cells.
+- `sim/cocotb/Makefile`: added `test-v08-framebuffer-mirror` and
+  `test-v08-framebuffer`.
+- `programs/common/`: added shared `crt0.S`, `linker.ld`, `tinycpu_mmio.h`,
+  and `makehex.py` support for newer bare-metal demos.
+- `programs/framebuffer_demo/`: added a finite-smoke plus continuing-animation
+  RV32IM framebuffer demo and build flow.
+- `notebooks/`: added the Python loader/display helper and framebuffer demo
+  notebook scaffold.
+- `.gitignore`: ignored generated framebuffer demo firmware outputs.
+- `README.md`, `docs/architecture.md`, `docs/jupyter_framebuffer.md`,
+  `docs/memory_map.md`, `docs/release_checklist.md`,
+  `docs/simulation.md`, `docs/verification.md`, `docs/roadmap.md`,
+  `programs/README.md`, and `AGENTS.md`: documented the v0.8 framebuffer
+  mirror path, maps, tests, and limitations.
+
+Reason:
+
+- Implement the `v0.8-jupyter-framebuffer-demo` interface without adding full
+  Tetris, HDMI/VGA, interrupts, CSRs, UART, or unsupported compliance claims.
+
+Validation:
+
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-v08-framebuffer-mirror`
+  passed.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-v08-framebuffer`
+  passed.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C programs/framebuffer_demo`
+  passed and generated ignored firmware artifacts.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-all`
+  passed after the v0.8 mirror changes.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-riscv-isa`
+  passed after the v0.8 mirror changes.
+- `python3 -m py_compile notebooks/tinycpu_loader.py` passed.
+- `python3 -m json.tool notebooks/framebuffer_demo.ipynb` passed.
+- `git diff --check` passed.
+
+Next:
+
+- Run the broader simulation aggregates, then exercise the notebook flow on a
+  real PYNQ-Z2 overlay before adding any screenshot or GIF.
+
+### 2026-06-03 - add v0.9 generic interactive I/O and TinyTetris demo
+
+Changed:
+
+- `rtl/bus/tinycpu_axil_loader.sv`: added loader-side `HOST_INPUT_WRITE`,
+  optional host command/clear registers, and generic app mirror offsets for
+  `APP_STATUS`, `APP_VALUE0`, `APP_VALUE1`, and `FRAME_COUNTER`.
+- `rtl/soc/tinycpu_dmem_decoder.sv`: added CPU-side `HOST_INPUT`,
+  `APP_VALUE0`, `APP_VALUE1`, `FRAME_COUNTER`, and `COMMAND_ACK` behavior
+  while preserving framebuffer/test-status behavior.
+- `rtl/soc/tinycpu_soc.sv`: wired host input and generic app mirror signals
+  between the loader and dmem decoder.
+- `programs/common/tinycpu_mmio.h`: added generic app I/O names with
+  compatibility aliases for older game-style names.
+- `programs/interactive_demo/`: added a generic host-input to app-output
+  framebuffer smoke demo and build flow.
+- `programs/tetris/`: added a small TinyTetris app demo and build flow.
+- `notebooks/tinycpu_loader.py`: added generic input/write and app mirror read
+  APIs while keeping existing loader methods.
+- `notebooks/tetris_controller.py`, `interactive_io_demo.ipynb`, and
+  `tetris_demo.ipynb`: added generic interactive and TinyTetris notebook
+  scaffolds.
+- `sim/cocotb/test_v09_interactive_io.py` and
+  `sim/cocotb/test_v09_tetris_smoke.py`: added host-input, generic app I/O,
+  and TinyTetris smoke coverage.
+- `sim/cocotb/Makefile`: added `test-v09-host-input`,
+  `test-v09-interactive-io`, `test-v09-tetris-smoke`, and
+  `test-v09-interactive`.
+- `README.md`, `docs/architecture.md`, `docs/jupyter_framebuffer.md`,
+  `docs/jupyter_interactive_io.md`, `docs/jupyter_tetris.md`,
+  `docs/memory_map.md`, `docs/release_checklist.md`, `docs/roadmap.md`,
+  `docs/simulation.md`, `docs/verification.md`, `programs/README.md`, and
+  `AGENTS.md`: documented the v0.9 generic app I/O map, demos, tests, and
+  limitations.
+- `.gitignore`: ignored generated interactive and Tetris firmware artifacts.
+
+Reason:
+
+- Add a generic Jupyter-controlled interactive I/O layer that can support many
+  small demos, using TinyTetris as the first application without hardcoding
+  Tetris behavior into RTL.
+
+Validation:
+
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-v08-framebuffer-mirror`
+  passed after the app mirror remap.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-v09-host-input`
+  passed.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-v09-interactive-io`
+  passed.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C programs/interactive_demo`
+  passed and generated ignored firmware artifacts.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C programs/tetris`
+  passed and generated ignored firmware artifacts.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-v09-tetris-smoke`
+  passed.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-v09-interactive`
+  passed the v0.9 host-input, interactive I/O, and TinyTetris smoke aggregate.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-all`
+  passed the current CI aggregate.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-riscv-isa`
+  passed the selected RV32I/RV32M ISA aggregate.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C programs/framebuffer_demo`
+  passed after the generic app mirror remap and generated ignored firmware
+  artifacts.
+- `python3 -m py_compile notebooks/tinycpu_loader.py notebooks/tetris_controller.py`
+  passed.
+- `python3 -m json.tool notebooks/framebuffer_demo.ipynb`,
+  `python3 -m json.tool notebooks/interactive_io_demo.ipynb`, and
+  `python3 -m json.tool notebooks/tetris_demo.ipynb` passed.
+- `git diff --check` passed.
+
+Next:
+
+- Exercise the interactive notebooks on a real PYNQ-Z2 overlay before adding
+  any screenshot or GIF.
+
+### 2026-06-03 - organize notebook guide
+
+Changed:
+
+- `notebooks/README.md`: reorganized the PYNQ notebook guide with directory
+  layout, related firmware paths, typical board flow, loader-side register
+  offsets, CPU-side map references, and per-demo notes.
+- `AGENTS.md`: recorded the notebook guide cleanup.
+
+Reason:
+
+- Make the Jupyter demo entry points, file locations, and loader/app I/O
+  responsibilities easier to follow before board bring-up.
+
+Validation:
+
+- `git diff --check` passed.
+
+Next:
+
+- Exercise the notebooks on a real PYNQ-Z2 overlay once the bitstream and
+  matching `.hwh` are available.
+
+### 2026-06-03 - add PYNQ AXI overlay wiring
+
+Changed:
+
+- `rtl/board/tinycpu_pynq_axi_overlay.sv`: added a Vivado block-design module
+  wrapper with full AXI-Lite slave pins, PS clock/reset inputs, PL buttons,
+  switches, LEDs, and a connection into `tinycpu_soc`.
+- `fpga/vivado/build_pynq_axi_overlay.tcl`: added a reproducible Vivado flow
+  that creates a Zynq PS block design, enables `M_AXI_GP0`, connects it through
+  an AXI interconnect to the tinycpu loader/control slave, maps the loader at
+  `0x43C0_0000`, and emits a bitstream plus `.hwh`.
+- `fpga/vivado/pynqz2_axi_overlay.xdc`: added PL LED, switch, and button
+  constraints for the PS-driven overlay.
+- `README.md`, `docs/architecture.md`, `docs/pynqz2_bringup.md`,
+  `docs/jupyter_interactive_io.md`, `docs/jupyter_tetris.md`,
+  `notebooks/README.md`, and `AGENTS.md`: documented the new PYNQ/Jupyter AXI
+  overlay build and board run flow.
+
+Reason:
+
+- Let PYNQ/Jupyter reach the tinycpu AXI-Lite loader/control slave so notebook
+  demos can load firmware, write host input, and read app/framebuffer mirrors
+  on real hardware.
+
+Validation:
+
+- `iverilog -g2012 -s tinycpu_pynq_axi_overlay -o /tmp/tinycpu_pynq_axi_overlay.vvp rtl/core/*.sv rtl/bus/*.sv rtl/mem/*.sv rtl/soc/*.sv rtl/board/tinycpu_pynq_axi_overlay.sv`
+  passed.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-v09-tetris-smoke`
+  passed after the overlay wrapper/Tcl additions.
+- `command -v vivado` failed in this local environment, so the new Vivado
+  overlay Tcl flow was not run here.
+
+Next:
+
+- Run `vivado -mode batch -source fpga/vivado/build_pynq_axi_overlay.tcl` on a
+  machine with Vivado and PYNQ-Z2 board support, then copy the generated
+  bitstream and `.hwh` to the board for notebook testing.
+
+### 2026-06-03 - standardize notebook README structure
+
+Changed:
+
+- `notebooks/README.md`: reorganized the notebook guide into standard README
+  sections for prerequisites, contents, firmware build, overlay build, PYNQ
+  deployment, run order, addressing model, loader offset reference, demo notes,
+  and troubleshooting.
+- `AGENTS.md`: recorded the documentation structure update.
+
+Reason:
+
+- Make the PYNQ/Jupyter demo instructions easier to scan and closer to a
+  conventional project README layout.
+
+Validation:
+
+- `git diff --check` passed.
+- `python3 -m py_compile notebooks/tinycpu_loader.py notebooks/tetris_controller.py`
+  passed.
+- `python3 -m json.tool notebooks/interactive_io_demo.ipynb`,
+  `python3 -m json.tool notebooks/framebuffer_demo.ipynb`, and
+  `python3 -m json.tool notebooks/tetris_demo.ipynb` passed.
+
+Next:
+
+- Continue with real PYNQ-Z2 overlay/notebook testing once the bitstream and
+  matching `.hwh` are generated.
+
+### 2026-06-03 - unify current milestone and board docs
+
+Changed:
+
+- `docs/pynqz2_bringup.md`: rewrote the board-level guide as the single entry
+  point for pin smoke, pure PL preloaded firmware, and PYNQ/Jupyter AXI overlay
+  flows.
+- `README.md`, `docs/architecture.md`, `docs/simulation.md`,
+  `docs/verification.md`, `docs/instruction_set.md`, `docs/pipeline.md`,
+  `docs/pynq-z2-led-bringup.md`, `docs/baremetal_c.md`,
+  `docs/jupyter_framebuffer.md`, `docs/jupyter_interactive_io.md`,
+  `docs/jupyter_tetris.md`, `docs/jupyter_tetris_plan.md`,
+  `docs/roadmap.md`, `rtl/core/README.md`, `programs/README.md`, and
+  `notebooks/README.md`: aligned current-user wording around
+  `v0.9-jupyter-interactive-io-tetris-demo`, while keeping historical `v0.x`
+  prefixes where they are real target names, roadmap entries, or release
+  history.
+- `notebooks/framebuffer_demo.ipynb`: removed stale v0.8 wording from the
+  intro markdown cell.
+- `AGENTS.md`: recorded the milestone/doc unification.
+
+Reason:
+
+- Make the current board/Jupyter path easier to find and avoid mixing current
+  instructions with historical milestone wording.
+
+Validation:
+
+- `git diff --check` passed.
+- `python3 -m py_compile notebooks/tinycpu_loader.py notebooks/tetris_controller.py`
+  passed.
+- `python3 -m json.tool notebooks/interactive_io_demo.ipynb`,
+  `python3 -m json.tool notebooks/framebuffer_demo.ipynb`, and
+  `python3 -m json.tool notebooks/tetris_demo.ipynb` passed.
+- `rg` scan found no remaining stale current-milestone wording such as
+  `current v0.6`, `v0.8 development`, `v0.9 development`, future PS/Jupyter
+  loader wording, or loader-idle board wording in current user-facing docs.
+
+Next:
+
+- Continue with real PYNQ-Z2 overlay/notebook testing once the bitstream and
+  matching `.hwh` are generated.
+
+### 2026-06-03 - build and program PYNQ AXI overlay
+
+Changed:
+
+- `rtl/board/tinycpu_pynq_axi_overlay_bd.v`: added a Verilog-only Vivado block
+  design module-reference wrapper around the SystemVerilog
+  `tinycpu_pynq_axi_overlay` implementation.
+- `fpga/vivado/build_pynq_axi_overlay.tcl`: added the BD wrapper source and
+  changed loader address assignment to use `assign_bd_address -offset
+  0x43C0_0000 -range 0x00020000` in the PS data address space.
+- `AGENTS.md`: recorded the overlay build/programming results.
+
+Reason:
+
+- Vivado block design module-reference cells rejected a SystemVerilog top file,
+  and the original post-auto-assignment offset update targeted a read-only
+  slave segment property.
+
+Validation:
+
+- `iverilog -g2012 -s tinycpu_pynq_axi_overlay_bd -o /tmp/tinycpu_pynq_axi_overlay_bd.vvp rtl/core/*.sv rtl/bus/*.sv rtl/mem/*.sv rtl/soc/*.sv rtl/board/tinycpu_pynq_axi_overlay.sv rtl/board/tinycpu_pynq_axi_overlay_bd.v`
+  passed.
+- `vivado -mode batch -source fpga/vivado/build_pynq_axi_overlay.tcl` generated
+  `tinycpu_pynq_system_wrapper.bit` and `tinycpu_pynq_system.hwh`.
+- Vivado routed and wrote the bitstream, but timing was not met:
+  `WNS=-5.797 ns`, `TNS=-6873.107 ns`.
+- Vivado Hardware Manager programmed device `xc7z020_1` with
+  `tinycpu_pynq_system_wrapper.bit`; startup status reported `HIGH`.
+- `git diff --check` passed.
+
+Next:
+
+- Try the PYNQ notebooks against the programmed overlay, then reduce the
+  overlay/core clock or optimize the mul/div critical paths before treating the
+  bitstream as timing-clean.
+
+### 2026-06-03 - fix PYNQ AXI overlay address and timing
+
+Changed:
+
+- `rtl/board/tinycpu_pynq_axi_overlay.sv`: mapped PS AXI absolute addresses
+  down to the loader's 17-bit local address window before entering
+  `tinycpu_soc`.
+- `fpga/vivado/build_pynq_axi_overlay.tcl`: moved the FCLK0 frequency override
+  after PYNQ-Z2 board-preset automation and set both the Hz and MHz PS clock
+  parameters for a 25 MHz bring-up overlay.
+- `AGENTS.md`: recorded the project-level PYNQ/Jupyter overlay diagnosis and
+  validation.
+
+Reason:
+
+- PYNQ MMIO accesses arrive in the PS address space at `0x43C0_0000`, while
+  `tinycpu_axil_loader` expects local loader offsets. The old wrapper could
+  therefore miss the loader control/status/register window.
+- The previous overlay build was constrained at 100 MHz despite the intended
+  lower bring-up clock, causing severe routed timing failures on the pipelined
+  core and mul/div paths.
+
+Validation:
+
+- `iverilog -g2012 -s tinycpu_pynq_axi_overlay_bd -o /tmp/tinycpu_pynq_axi_overlay_bd.vvp rtl/core/*.sv rtl/bus/*.sv rtl/mem/*.sv rtl/soc/*.sv rtl/board/tinycpu_pynq_axi_overlay.sv rtl/board/tinycpu_pynq_axi_overlay_bd.v`
+  passed.
+- `git diff --check` passed.
+- `vivado -mode batch -source fpga/vivado/build_pynq_axi_overlay.tcl` generated
+  a timing-clean overlay with `clk_fpga_0` at 25 MHz, `WNS=13.976 ns`, and
+  `TNS=0.000 ns`.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-v09-tetris-smoke`
+  passed with `TESTS=1 PASS=1 FAIL=0`.
+- Vivado Hardware Manager programmed device `xc7z020_1` with the rebuilt
+  `tinycpu_pynq_system_wrapper.bit`; startup status reported `HIGH`.
+- A refreshed PYNQ run package was staged under
+  `/tmp/tinycpu_pynq_run_fixed_20260603_0420`.
+
+Next:
+
+- Copy the refreshed package to the PYNQ board and first test direct
+  `MMIO(0x43C00000, 0x20000)` access before reintroducing `Overlay()`.
+
+### 2026-06-03 - make TinyTetris closer to standard Tetris
+
+Changed:
+
+- `programs/tetris/tetris.c`: replaced the earlier 2x2 falling-block smoke
+  demo with a compact seven-tetromino implementation using 4x4 shape masks,
+  clockwise rotation, simple wall kicks, line clearing, scoring, pause,
+  restart, soft drop, hard drop, and game-over detection.
+- `notebooks/tetris_controller.py`: held button inputs briefly before clearing
+  them so TinyCPU can reliably sample Jupyter button presses.
+- `programs/tetris/README.md`: documented the current TinyTetris rule scope.
+- `AGENTS.md`: recorded the Tetris gameplay alignment and validation.
+
+Reason:
+
+- The prior Tetris firmware was useful as an interactive I/O smoke test, but it
+  behaved unlike normal Tetris: only a 2x2 square existed and rotate was a
+  no-op. Jupyter button pulses were also too short for comfortable manual
+  board use.
+
+Validation:
+
+- `make -C programs/tetris` passed and regenerated local ignored firmware
+  outputs.
+- `python3 -m py_compile notebooks/tinycpu_loader.py notebooks/tetris_controller.py`
+  passed.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-v09-tetris-smoke`
+  passed with `TESTS=1 PASS=1 FAIL=0`.
+- `git diff --check` passed.
+- The refreshed PYNQ run package at
+  `/tmp/tinycpu_pynq_run_fixed_20260603_0420.tar.gz` was updated with the new
+  `programs/tetris/firmware.hex` and `notebooks/tetris_controller.py`.
+
+Next:
+
+- Copy the refreshed package to the PYNQ board again, reload the firmware, and
+  test Start/Rotate/Soft Drop/Hard Drop from Jupyter.
+
+### 2026-06-03 - complete TinyTetris gameplay pass
+
+Changed:
+
+- `programs/tetris/tetris.c`: expanded TinyTetris into a fuller clean-room
+  Tetris-style game with seven tetrominoes, fixed seven-bag sequencing,
+  clockwise rotation, simple wall kicks, ghost projection, a one-piece hold
+  slot, level-based gravity, soft drop, hard drop, top-out/game-over detection,
+  line clearing, and line/drop scoring.
+- `programs/tetris/tetris.c`: changed the internal board representation from
+  byte cells to packed 32-bit words to reduce BRAM byte-load/store pressure on
+  the teaching CPU while still writing byte cells to the framebuffer MMIO
+  mirror.
+- `notebooks/tetris_controller.py`: added Hold input and helpers for reading
+  lines, level, next piece, and held piece from packed app metadata.
+- `notebooks/tetris_demo.ipynb`: added a Hold button and displayed level,
+  next piece, and held piece alongside score, lines, status, frame count, and
+  board text.
+- `programs/tetris/README.md`, `docs/jupyter_tetris.md`, and
+  `notebooks/README.md`: documented the fuller TinyTetris feature set, input
+  bit 7 for Hold, and packed `APP_VALUE1` fields.
+- `AGENTS.md`: recorded the complete TinyTetris gameplay pass and validation.
+
+Reason:
+
+- The previous firmware was closer to an interactive framebuffer smoke test
+  than a complete Tetris-style game. This pass keeps the implementation
+  clean-room and FPGA-friendly while aligning the gameplay with common online
+  Tetris mechanics such as tetromino rotation, hold, ghost, hard drop, line
+  clears, and level progression.
+
+Validation:
+
+- `make -C programs/tetris` passed and regenerated local ignored firmware
+  outputs.
+- `python3 -m py_compile notebooks/tinycpu_loader.py notebooks/tetris_controller.py`
+  passed.
+- `python3 -m json.tool notebooks/tetris_demo.ipynb` passed.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-v09-tetris-smoke`
+  passed with `TESTS=1 PASS=1 FAIL=0`.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-v09-interactive`
+  passed the host-input, interactive-I/O, and TinyTetris smoke tests.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-all`
+  passed the current CI aggregate.
+- `git diff --check` passed.
+- `/tmp/tinycpu_pynq_run_fixed_20260603_0420.tar.gz` was refreshed with the
+  updated TinyTetris firmware, notebook, and controller helper.
+
+Next:
+
+- Copy the refreshed PYNQ package to the board and reload
+  `programs/tetris/firmware.hex` from Jupyter.
+
+### 2026-06-03 - prepare v0.9 project tree for GitHub upload
+
+Changed:
+
+- `.gitignore`: ignored the local `NA/` Vivado PS summary directory so
+  generated board reports do not enter the public source tree.
+- `AGENTS.md`: recorded the final project-tree cleanup before publishing.
+
+Reason:
+
+- Keep the GitHub upload source-first and avoid committing local Vivado
+  generated reports, bitstreams, or firmware build products.
+
+Validation:
+
+- Pending final staged-file review and push.
+
+Next:
+
+- Stage the reproducible source, documentation, notebook, and test files, then
+  push the branch to GitHub.
