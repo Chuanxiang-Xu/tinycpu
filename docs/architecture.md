@@ -1,7 +1,7 @@
 # Architecture
 
-`v0.9-jupyter-interactive-io-tetris-demo` is a source-first, clean-room
-educational RV32IM SoC for the PYNQ-Z2 FPGA board.
+`v1.0-stable-rv32im-pipeline-core` is a source-first, clean-room educational
+RV32IM SoC for the PYNQ-Z2 FPGA board.
 
 ```text
 PYNQ-Z2 pins
@@ -18,9 +18,9 @@ PYNQ-Z2 PS M_AXI_GP0
           -> tinycpu_soc AXI-Lite loader/control slave
 ```
 
-The CPU target ISA is standard RISC-V RV32IM. The current milestone carries
-RV32I plus the standard RV32M multiply/divide extension into an educational
-overlapped pipeline.
+The CPU target ISA is standard RISC-V RV32IM. The current milestone stabilizes
+RV32I plus the standard RV32M multiply/divide extension in an educational
+overlapped pipeline with selected clean-room simulation coverage.
 
 The core uses IF, ID, EX, MEM, and WB pipeline registers with valid bits,
 forwarding hooks, load-use stall policy, and branch flush policy. AXI-Lite is
@@ -44,11 +44,12 @@ The loader/control slave also exposes read-only mirrors of CPU-written
 program, start the CPU, and poll a small pass/fail result without pretending to
 access the CPU-side `0x1000_xxxx` MMIO page directly.
 
-For `v0.9-jupyter-interactive-io-tetris-demo`, the same mirror pattern is
-extended to generic app I/O: Jupyter writes `HOST_INPUT` at loader offset
-`0x10030`, while the CPU polls `HOST_INPUT` at `0x1000_0010` and writes
-`APP_STATUS`, `APP_VALUE0`, `APP_VALUE1`, `FRAME_COUNTER`, and a packed
-framebuffer. The CPU continues to use only its dmem MMIO page.
+The v0.9 demo path extends the same mirror pattern to generic app I/O:
+Jupyter writes `HOST_INPUT` at loader offset `0x10030`, while the CPU polls
+`HOST_INPUT` at `0x1000_0010` and writes `APP_STATUS`, `APP_VALUE0`,
+`APP_VALUE1`, `FRAME_COUNTER`, and a packed framebuffer. The CPU continues to
+use only its dmem MMIO page. This remains a demo path outside the v1.0 core
+stability claim unless real board validation evidence is added.
 
 The pure PL board wrapper, `pynqz2_top`, connects PYNQ-Z2 pins to the SoC:
 

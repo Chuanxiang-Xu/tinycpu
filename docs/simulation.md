@@ -1,10 +1,12 @@
 # Simulation
 
 tinycpu uses cocotb and Icarus Verilog for lightweight RTL simulation. The
-current simulation suite covers the pipeline/BRAM/loader base, selected
-RV32I/RV32M ISA behavior, loader mirrors, framebuffer mirrors, host input, and
-TinyTetris smoke behavior. Some target names retain historical `v0.x` prefixes
-because they mark when that coverage was introduced.
+current v1.0 stable simulation claim covers the pipeline/BRAM/loader base,
+selected RV32I/RV32M ISA behavior, C firmware smoke, and AXI-Lite
+loader/control behavior. Loader mirrors, framebuffer mirrors, host input, and
+TinyTetris smoke targets remain available as demo-path regressions outside the
+core v1.0 stability aggregate. Some target names retain historical `v0.x`
+prefixes because they mark when that coverage was introduced.
 
 ## Setup
 
@@ -58,6 +60,7 @@ make -C sim/cocotb test-riscv-smoke
 make -C sim/cocotb test-rv32ui
 make -C sim/cocotb test-rv32um
 make -C sim/cocotb test-riscv-isa
+make -C sim/cocotb test-v10-stable
 make -C sim/cocotb test-all
 ```
 
@@ -167,11 +170,25 @@ make -C sim/cocotb test-rv32um
 make -C sim/cocotb test-riscv-isa
 ```
 
-`test-all` is the current CI aggregate. It runs the GPIO smoke test, C GPIO
-firmware test, standalone RV32M mul/div unit test, the BRAM/loader/pipeline
-suite, and the RISC-V ISA smoke target. The v0.5 directed and grid firmware
-targets remain individually runnable while their expectations are being
-realigned with the current pipeline core.
+`test-v10-stable` is the v1.0 stable release aggregate and the preferred CI
+entry point. It runs:
+
+- `test-v03-gpio`
+- `test-v04-firmware-gpio`
+- `test-v05-muldiv`
+- `test-v06-bram`
+- `test-v06-axil-loader`
+- `test-v06-pipeline-overlap`
+- `test-v06-forwarding`
+- `test-v06-load-use`
+- `test-v06-branch-flush`
+- `test-riscv-smoke`
+- `test-rv32ui`
+- `test-rv32um`
+
+`test-all` is an alias for `test-v10-stable`. The v0.5 directed/grid tests and
+the v0.7/v0.8/v0.9 PYNQ/Jupyter/framebuffer/TinyTetris tests remain
+individually runnable outside the v1.0 core stability aggregate.
 
 ## Generated Outputs
 

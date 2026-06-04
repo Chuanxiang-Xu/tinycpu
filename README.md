@@ -9,13 +9,15 @@ tinycpu is a source-first, clean-room educational RV32IM SoC for the PYNQ-Z2
 FPGA board, with dmem-side MMIO, an AXI-Lite loader/control block, cocotb
 simulation, and a Vivado Tcl flow.
 
-Current development milestone: `v0.9-jupyter-interactive-io-tetris-demo`.
+Current development milestone: `v1.0-stable-rv32im-pipeline-core`.
 
-Important status note: the repository contains an overlapped educational
-pipeline core with Harvard-style simple memory ports, a unified BRAM/loader
-SoC wrapper, selected RV32I/RV32M ISA-style tests, and a PYNQ/Jupyter AXI
-overlay path for interactive demos. Some test target names retain their
-historical `v0.x` prefixes because they mark when that coverage was added.
+Important status note: v1.0 is a stable RV32IM pipeline-core release candidate.
+The release claim is selected clean-room RV32I/RV32M ISA-style simulation,
+pipeline forwarding/load-use/branch-flush coverage, C firmware smoke tests,
+and AXI-Lite loader/control simulation. PYNQ/Jupyter, framebuffer, and
+TinyTetris paths remain demo flows unless real board validation evidence is
+added. Some test target names retain their historical `v0.x` prefixes because
+they mark when that coverage was added.
 
 This repository does not depend on private course solution code, local homework
 directories, generated Vivado projects, or non-public RTL.
@@ -33,6 +35,10 @@ directories, generated Vivado projects, or non-public RTL.
   TinyTetris as the first app demo.
 - Vivado Tcl flows for pin smoke, pure PL preloaded firmware, and the
   PYNQ/Jupyter AXI overlay.
+- Selected clean-room RV32I/RV32M tests, not a full RISC-V compliance claim.
+- No release claim for CSRs, architectural traps, interrupts, misaligned
+  access traps, or invalid-instruction behavior beyond the documented
+  simulation behavior.
 
 ## Teaching Path
 
@@ -221,8 +227,14 @@ make -C sim/cocotb test-riscv-smoke
 make -C sim/cocotb test-rv32ui
 make -C sim/cocotb test-rv32um
 make -C sim/cocotb test-riscv-isa
+make -C sim/cocotb test-v10-stable
 make -C sim/cocotb test-all
 ```
+
+`test-v10-stable` is the v1.0 release aggregate. It runs GPIO smoke, C GPIO
+firmware, standalone RV32M mul/div, BRAM, AXI-Lite loader/control, pipeline
+overlap/forwarding/load-use/branch-flush, RISC-V smoke, selected RV32I, and
+selected RV32M tests. `test-all` is an alias for this CI aggregate.
 
 `test-v04-firmware-gpio` builds `programs/c_demo/firmware.hex` first.
 `test-v05-rv32im-grid` builds `programs/rv32im_demo/firmware.hex` first.
@@ -246,12 +258,8 @@ make -C sim/cocotb test-riscv-isa
 These targets pass a selected rv32ui-style and rv32um-style subset in
 simulation, including byte/halfword loads and an M-result pipeline stress
 case. They are not a full RISC-V compliance claim.
-The `test-all` target is the current CI aggregate: GPIO smoke, C GPIO
-firmware, standalone RV32M mul/div, the BRAM/loader/pipeline suite, and the
-RISC-V ISA smoke target. GitHub Actions also runs `test-riscv-isa` so the
-selected rv32ui-style and rv32um-style tests are covered before release.
 The older v0.5 directed/grid tests remain available as individual regression
-targets while they are being realigned with the current pipeline core.
+targets outside the v1.0 stable aggregate.
 
 Expected result for each single-test cocotb target:
 
