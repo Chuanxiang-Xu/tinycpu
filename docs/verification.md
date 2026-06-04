@@ -1,12 +1,14 @@
 # Verification
 
 This page tracks verification coverage for the current
-`v0.9-jupyter-interactive-io-tetris-demo` milestone.
+`v1.0-stable-rv32im-pipeline-core` release candidate.
 
 tinycpu uses selected clean-room simulation tests for RV32I/RV32M behavior and
-focused cocotb regressions for BRAM, loader, MMIO, pipeline, and framebuffer
-mirror infrastructure. This is not a full RISC-V architectural compliance
-claim.
+focused cocotb regressions for BRAM, AXI-Lite loader/control, MMIO, and
+pipeline behavior. This is not a full RISC-V architectural compliance claim.
+PYNQ/Jupyter, framebuffer, and TinyTetris tests remain demo-path regressions
+outside the core v1.0 stability claim unless real board validation evidence is
+added.
 
 ## How To Run
 
@@ -16,6 +18,7 @@ make -C sim/cocotb test-riscv-smoke
 make -C sim/cocotb test-rv32ui
 make -C sim/cocotb test-rv32um
 make -C sim/cocotb test-riscv-isa
+make -C sim/cocotb test-v10-stable
 make -C sim/cocotb test-v07-loader-mirror
 make -C sim/cocotb test-v08-framebuffer-mirror
 make -C sim/cocotb test-v09-host-input
@@ -23,9 +26,10 @@ make -C sim/cocotb test-v09-interactive-io
 make -C sim/cocotb test-v09-tetris-smoke
 ```
 
-`test-all` is the current CI aggregate. GitHub Actions also runs
-`test-riscv-isa` so the selected rv32ui-style and rv32um-style tests are
-covered before release. Some target names retain their historical `v0.x`
+`test-v10-stable` is the v1.0 stable release aggregate and the GitHub Actions
+entry point. It includes the selected rv32ui-style and rv32um-style aggregates,
+so CI does not need a separate `test-riscv-isa` step. `test-all` is an alias
+for `test-v10-stable`. Some target names retain their historical `v0.x`
 prefixes because they mark when that coverage was introduced.
 
 ## Existing Test Targets
@@ -49,10 +53,13 @@ prefixes because they mark when that coverage was introduced.
 | `test-riscv-smoke` | Minimal RISC-V ISA smoke test | PASS |
 | `test-rv32ui` | Selected rv32ui-style RV32I tests | PASS |
 | `test-rv32um` | Selected rv32um-style RV32M tests | PASS |
+| `test-v10-stable` | v1.0 stable CI/release aggregate | PASS |
 
-The older v0.5 directed and grid firmware targets remain available as
-individual regression targets while their expectations are reviewed against the
-current pipeline/BRAM architecture.
+The v0.7/v0.8/v0.9 loader mirror, framebuffer, host-input, interactive I/O,
+and TinyTetris targets remain available as demo-path regressions. They are not
+part of the v1.0 core stability claim. The older v0.5 directed and grid
+firmware targets remain available as individual regression targets outside the
+v1.0 stable aggregate.
 
 ## RISC-V ISA Test Infrastructure
 
@@ -107,6 +114,24 @@ simulation coverage.
 | Loads | `lw`, `lb`, `lbu`, `lh`, `lhu` | PASS | Sign/zero extension and little-endian behavior. |
 | Stores | `sw`, `sb`, `sh` | PASS | Byte write strobes and store data path. |
 | Pipeline hazards | ALU-use, load-use, store-data, branch flush | PASS | Selected pipeline-specific cases. |
+
+## v1.0 Pipeline Claim Trace
+
+| Claim area | Covered by |
+| --- | --- |
+| ALU result used immediately by ALU | `test-v06-forwarding`, selected rv32ui ALU tests |
+| ALU result used by branch | selected rv32ui branch/compare tests |
+| ALU result used as store data | `test-v06-forwarding` |
+| Load result used by ALU | `test-v06-load-use` |
+| Load result used by branch | `test-v06-load-use` |
+| Load result used as store address | `test-v06-load-use` |
+| Load result used as store data | `test-v06-load-use` |
+| Branch taken flush prevents wrong-path side effects | `test-v06-branch-flush`, selected rv32ui branch tests |
+| JAL/JALR flush prevents wrong-path side effects | `test-v06-branch-flush`, selected rv32ui jump tests |
+| Mul/div result used immediately by ALU/store/branch | `test-rv32um` through `m_pipeline` |
+| Back-to-back RV32M instructions | `test-rv32um` through `m_pipeline` |
+| `x0` is never written | selected rv32ui and rv32um tests |
+| Byte/halfword load/store endian and strobes | `test-v06-bram`, selected rv32ui load/store tests, store-channel checks in `test_riscv_isa.py` |
 
 ## Selected rv32um-Style Coverage
 

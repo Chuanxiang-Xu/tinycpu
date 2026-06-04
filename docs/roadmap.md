@@ -64,7 +64,6 @@
 
 ## v0.9-jupyter-interactive-io-tetris-demo
 
-- Current development milestone.
 - Add generic `HOST_INPUT`, `APP_STATUS`, `APP_VALUE0`, `APP_VALUE1`, and
   `FRAME_COUNTER` app I/O naming.
 - Add loader-side host input writes and app/framebuffer mirrors.
@@ -72,15 +71,36 @@
 - Add TinyTetris as the first application on top of the generic interface.
 - Keep Jupyter input button-based; keyboard events are future work.
 
+## v1.0-stable-rv32im-pipeline-core
+
+- Current development milestone.
+- Stabilize the existing RV32IM pipeline CPU core and SoC simulation flow.
+- Use `make -C sim/cocotb test-v10-stable` as the release and CI aggregate.
+- Claim selected clean-room RV32I/RV32M tests, not full RISC-V compliance.
+- Include pipeline forwarding, load-use, branch/jump flush, C firmware smoke,
+  standalone RV32M mul/div, BRAM, and AXI-Lite loader/control simulation
+  coverage.
+- Keep PYNQ/Jupyter, framebuffer, and TinyTetris as demo paths outside the
+  core v1.0 stability claim unless board validation evidence is added.
+- Do not add interrupts, exceptions, caches, UART bootloading, custom
+  instructions, or accelerator logic for this milestone.
+
+## v1.1-pynq-overlay-jupyter-loader-polish
+
+- Run the PYNQ/Jupyter AXI overlay and notebooks on a real PYNQ-Z2 board.
+- Polish the Python/Jupyter loader UX around loading firmware, setting
+  `BOOT_PC`, releasing reset/halt, and polling status.
+- Add board validation notes and screenshot/GIF evidence only after successful
+  hardware runs.
+- Keep framebuffer and TinyTetris as demos unless they gain repeatable board
+  validation and documented acceptance criteria.
+
 ## Follow-Up Work
 
 - Realign the older v0.5 directed/grid regression expectations with the current
   pipeline core.
 - Restore or document FPGA-oriented synchronous instruction BRAM timing if the
   implementation changes from the current simple imem model.
-- Run the current PYNQ/Jupyter AXI overlay and notebooks on a real PYNQ-Z2
-  board.
-- Add real board screenshot/GIF evidence only after successful hardware runs.
 - Improve TinyTetris controls or rendering if the button-based notebook flow
   feels too coarse on hardware.
 

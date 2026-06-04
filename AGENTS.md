@@ -4,7 +4,7 @@
 
 tinycpu is a clean-room educational RV32IM SoC for the PYNQ-Z2 FPGA board.
 
-Current development milestone: `v0.9-jupyter-interactive-io-tetris-demo`.
+Current development milestone: `v1.0-stable-rv32im-pipeline-core`.
 
 The current CPU is an RV32IM-target educational overlapped pipeline core. It
 uses IF/ID, ID/EX, EX/MEM, and MEM/WB pipeline registers, simple
@@ -14,7 +14,11 @@ SoC boundary, PS-visible loader mirrors for test/app/framebuffer status,
 loader-side host input writes, and Jupyter/Python helper files for framebuffer
 and TinyTetris demos. A PYNQ overlay Tcl flow connects Zynq PS `M_AXI_GP0` to
 the loader/control slave through an AXI interconnect. The CPU no longer has
-its own AXI-Lite master.
+its own AXI-Lite master. For v1.0, the stable release claim is limited to
+selected clean-room RV32I/RV32M simulation, pipeline hazard/flush coverage, C
+firmware smoke tests, and AXI-Lite loader/control simulation. PYNQ/Jupyter,
+framebuffer, and TinyTetris remain demo paths unless board validation evidence
+is added.
 
 Do not add private course code, private solution code, generated Vivado
 projects, bitstreams, firmware binaries, or local reference directories.
@@ -72,6 +76,7 @@ make -C sim/cocotb test-v09-host-input
 make -C sim/cocotb test-v09-interactive-io
 make -C sim/cocotb test-v09-tetris-smoke
 make -C sim/cocotb test-v09-interactive
+make -C sim/cocotb test-v10-stable
 make -C sim/cocotb test-all
 ```
 
@@ -127,6 +132,49 @@ Every file modification must include a synchronized update to this root
 `AGENTS.md`. Do not create `agent.md` or `Agent.md`.
 
 ## Maintenance log
+
+### 2026-06-04 - prepare v1.0 stable RV32IM pipeline release candidate
+
+Changed:
+
+- `sim/cocotb/Makefile`: added `test-v10-stable` as the v1.0 release
+  aggregate and made `test-all` an alias for it.
+- `.github/workflows/ci.yml`: changed CI to run
+  `make -C sim/cocotb test-v10-stable` as the single cocotb entry point.
+- `README.md`, `docs/architecture.md`, `docs/verification.md`,
+  `docs/roadmap.md`, `docs/pipeline.md`, `docs/simulation.md`, and
+  `rtl/core/README.md`: aligned the v1.0 release claim with selected
+  RV32I/RV32M, pipeline, firmware smoke, and AXI-Lite loader/control
+  simulation coverage.
+- `AGENTS.md`: recorded the v1.0 milestone, stable aggregate, and release
+  scope.
+
+Reason:
+
+- Prepare a precise v1.0 stable RV32IM pipeline-core release candidate without
+  adding new architecture features or overstating RISC-V compliance, traps,
+  interrupts, board, Jupyter, framebuffer, or TinyTetris validation.
+
+Validation:
+
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-v10-stable`
+  passed. The aggregate ran GPIO smoke, C GPIO firmware, standalone RV32M
+  mul/div, BRAM, AXI-Lite loader/control, pipeline overlap, forwarding,
+  load-use, branch-flush, RISC-V smoke, selected rv32ui-style, and selected
+  rv32um-style tests.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C sim/cocotb test-riscv-isa`
+  passed the selected rv32ui-style and rv32um-style aggregate.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C programs/c_demo`
+  passed with no rebuild needed.
+- `env PATH=/home/shane/Projects/tinycpu/.venv/bin:$PATH make -C programs/rv32im_demo`
+  passed and rebuilt local ignored firmware artifacts.
+- `command -v vivado` failed, so Vivado/PYNQ bitstream generation was not run
+  in this local environment.
+
+Next:
+
+- Push the v1.0 release-prep branch and let GitHub Actions run the
+  `test-v10-stable` CI entry point.
 
 ### 2026-05-19 - unify v0.5 milestone narrative
 

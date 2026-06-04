@@ -57,7 +57,7 @@ COMPILE_ARGS += \
 .PHONY: test-v09-host-input test-v09-interactive-io test-v09-tetris-smoke
 .PHONY: test-v09-interactive
 .PHONY: build-riscv-tests test-riscv-smoke test-rv32ui test-rv32um
-.PHONY: test-riscv-isa
+.PHONY: test-riscv-isa test-v10-stable
 
 test-v03-gpio:
 	$(MAKE) sim \
@@ -282,8 +282,12 @@ test-v05-rv32im-grid: firmware-rv32im-demo
 		RAM_INIT_WORDS=256 \
 		SIM_BUILD=sim_build/test-v05-rv32im-grid
 
-test-all: test-v03-gpio test-v04-firmware-gpio test-v05-muldiv
-test-all: test-v06-pipeline
-test-all: test-riscv-smoke
+test-v10-stable: test-v03-gpio test-v04-firmware-gpio test-v05-muldiv
+test-v10-stable: test-v06-bram test-v06-axil-loader
+test-v10-stable: test-v06-pipeline-overlap test-v06-forwarding
+test-v10-stable: test-v06-load-use test-v06-branch-flush
+test-v10-stable: test-riscv-smoke test-rv32ui test-rv32um
+
+test-all: test-v10-stable
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
